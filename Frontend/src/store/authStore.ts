@@ -4,7 +4,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'Admin' | 'Asset Manager' | 'Department Head' | 'Employee';
+  role: 'admin' | 'asset_manager' | 'department_head' | 'employee';
   department?: string;
   isActive: boolean;
 }
