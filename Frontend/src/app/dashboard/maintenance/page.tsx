@@ -1,7 +1,5 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { Plus, Wrench } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Wrench, ChevronDown, ChevronUp, Sparkles, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
 
@@ -9,6 +7,9 @@ export default function MaintenancePage() {
   const user = useAuthStore(state => state.user);
   const [requests, setRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Row Expansion State
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -21,7 +22,6 @@ export default function MaintenancePage() {
 
   const fetchRequests = async () => {
     try {
-      // If user is Admin/Asset Manager, fetch all. Otherwise fetch user's requests.
       const url = (user?.role === 'admin' || user?.role === 'asset_manager') 
         ? '/maintenance' 
         : `/maintenance?reportedBy=${user?._id}`;
@@ -88,6 +88,10 @@ export default function MaintenancePage() {
     }
   };
 
+  const toggleRow = (reqId: string) => {
+    setExpandedId(expandedId === reqId ? null : reqId);
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -109,6 +113,7 @@ export default function MaintenancePage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid hsl(var(--border))', color: 'hsl(var(--text-muted))', backgroundColor: 'hsla(var(--surface), 0.5)' }}>
+                  <th style={{ padding: '1rem', width: '48px' }}></th>
                   <th style={{ padding: '1rem', fontWeight: 500 }}>Asset</th>
                   <th style={{ padding: '1rem', fontWeight: 500 }}>Issue</th>
                   <th style={{ padding: '1rem', fontWeight: 500 }}>Reported By</th>
@@ -120,53 +125,157 @@ export default function MaintenancePage() {
               <tbody>
                 {requests.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>
+                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>
                       No maintenance requests found.
                     </td>
                   </tr>
                 ) : (
-                  requests.map(req => (
-                    <tr key={req._id} style={{ borderBottom: '1px solid hsl(var(--border))' }}>
-                      <td style={{ padding: '1rem', fontWeight: 500 }}>{req.assetId?.name} ({req.assetId?.assetTag})</td>
-                      <td style={{ padding: '1rem', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.description}</td>
-                      <td style={{ padding: '1rem' }}>{req.raisedBy?.name}</td>
-                      <td style={{ padding: '1rem' }}>
-                        <span style={{ 
-                          padding: '0.25rem 0.5rem', 
-                          borderRadius: '4px', 
-                          fontSize: '0.75rem', 
-                          fontWeight: 500,
-                          backgroundColor: req.priority === 'High' || req.priority === 'Critical' ? 'hsla(var(--error), 0.1)' : 'hsla(var(--text-muted), 0.1)',
-                          color: req.priority === 'High' || req.priority === 'Critical' ? 'hsl(var(--error))' : 'hsl(var(--text-muted))'
-                        }}>
-                          {req.priority}
-                        </span>
-                      </td>
-                      <td style={{ padding: '1rem' }}>
-                        <span style={{ 
-                          padding: '0.25rem 0.6rem', 
-                          borderRadius: '9999px', 
-                          fontSize: '0.75rem', 
-                          fontWeight: 500,
-                          backgroundColor: `hsla(${getStatusColor(req.status)}, 0.1)`,
-                          color: `hsl(${getStatusColor(req.status)})`
-                        }}>
-                          {req.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '1rem' }}>
-                        {(user?.role === 'admin' || user?.role === 'asset_manager') && req.status === 'Pending' && (
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button onClick={() => updateStatus(req._id, 'Approved')} className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>Approve</button>
-                            <button onClick={() => updateStatus(req._id, 'Rejected')} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>Reject</button>
-                          </div>
+                  requests.map(req => {
+                    const isExpanded = expandedId === req._id;
+                    const diagnostic = req.aiDiagnostic;
+                    
+                    return (
+                      <React.Fragment key={req._id}>
+                        <tr 
+                          onClick={() => toggleRow(req._id)}
+                          style={{ 
+                            borderBottom: '1px solid hsl(var(--border))',
+                            cursor: 'pointer',
+                            backgroundColor: isExpanded ? 'hsla(var(--primary), 0.02)' : 'transparent',
+                            transition: 'background-color var(--transition-fast)'
+                          }}
+                          className="hover:bg-hsla-surface"
+                        >
+                          <td style={{ padding: '1rem', textAlign: 'center' }}>
+                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </td>
+                          <td style={{ padding: '1rem', fontWeight: 500 }}>{req.assetId?.name} ({req.assetId?.assetTag})</td>
+                          <td style={{ padding: '1rem', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.description}</td>
+                          <td style={{ padding: '1rem' }}>{req.raisedBy?.name}</td>
+                          <td style={{ padding: '1rem' }}>
+                            <span style={{ 
+                              padding: '0.25rem 0.5rem', 
+                              borderRadius: '4px', 
+                              fontSize: '0.75rem', 
+                              fontWeight: 500,
+                              backgroundColor: req.priority === 'High' || req.priority === 'Critical' ? 'hsla(var(--error), 0.1)' : 'hsla(var(--text-muted), 0.1)',
+                              color: req.priority === 'High' || req.priority === 'Critical' ? 'hsl(var(--error))' : 'hsl(var(--text-muted))'
+                            }}>
+                              {req.priority}
+                            </span>
+                          </td>
+                          <td style={{ padding: '1rem' }}>
+                            <span style={{ 
+                              padding: '0.25rem 0.6rem', 
+                              borderRadius: '9999px', 
+                              fontSize: '0.75rem', 
+                              fontWeight: 500,
+                              backgroundColor: `hsla(${getStatusColor(req.status)}, 0.1)`,
+                              color: `hsl(${getStatusColor(req.status)})`
+                            }}>
+                              {req.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '1rem' }} onClick={(e) => e.stopPropagation()}>
+                            {(user?.role === 'admin' || user?.role === 'asset_manager') && req.status === 'Pending' && (
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button onClick={() => updateStatus(req._id, 'Approved')} className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>Approve</button>
+                                <button onClick={() => updateStatus(req._id, 'Rejected')} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>Reject</button>
+                              </div>
+                            )}
+                            {(user?.role === 'admin' || user?.role === 'asset_manager') && req.status === 'In Progress' && (
+                              <button onClick={() => updateStatus(req._id, 'Resolved')} className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: 'hsl(var(--success))' }}>Mark Resolved</button>
+                            )}
+                          </td>
+                        </tr>
+
+                        {isExpanded && (
+                          <tr style={{ backgroundColor: 'hsla(var(--secondary), 0.3)' }}>
+                            <td colSpan={7} style={{ padding: '1.5rem', borderBottom: '1px solid hsl(var(--border))' }}>
+                              <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                                <div style={{ marginBottom: '1rem' }}>
+                                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'hsl(var(--text))', marginBottom: '0.5rem' }}>Full Description of Issue</h4>
+                                  <p style={{ fontSize: '0.875rem', lineHeight: '1.5', color: 'hsl(var(--text))', backgroundColor: 'hsl(var(--surface))', padding: '0.75rem', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}>
+                                    {req.description}
+                                  </p>
+                                </div>
+
+                                {diagnostic ? (
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', borderTop: '1px solid hsl(var(--border))', paddingTop: '1rem', marginTop: '1rem' }}>
+                                    
+                                    {/* Left: Suggested Actions */}
+                                    <div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'purple', marginBottom: '0.75rem' }}>
+                                        <Sparkles size={16} />
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>AI Recommended Fix Checklist</span>
+                                      </div>
+                                      
+                                      <div 
+                                        style={{ fontSize: '0.875rem', lineHeight: '1.6', color: 'hsl(var(--text))', backgroundColor: 'hsl(var(--surface))', padding: '1rem', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                                        dangerouslySetInnerHTML={{ __html: diagnostic.suggestedActions.replace(/\n/g, '<br/>') }}
+                                      />
+                                    </div>
+
+                                    {/* Right: Technical Insights */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                      <div>
+                                        <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', fontWeight: 500, display: 'block', marginBottom: '0.25rem' }}>AI Suggested Priority:</span>
+                                        <span style={{ 
+                                          padding: '0.25rem 0.6rem', 
+                                          borderRadius: '9999px', 
+                                          fontSize: '0.75rem', 
+                                          fontWeight: 700,
+                                          backgroundColor: diagnostic.recommendedPriority === 'High' || diagnostic.recommendedPriority === 'Critical' ? 'hsla(var(--error), 0.1)' : 'hsla(var(--info), 0.1)',
+                                          color: diagnostic.recommendedPriority === 'High' || diagnostic.recommendedPriority === 'Critical' ? 'hsl(var(--error))' : 'hsl(var(--info))'
+                                        }}>
+                                          {diagnostic.recommendedPriority}
+                                        </span>
+                                      </div>
+
+                                      <div>
+                                        <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', fontWeight: 500, display: 'block', marginBottom: '0.25rem' }}>Probable Failure Root Causes:</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
+                                          {diagnostic.probableCauses?.map((cause: string, cidx: number) => (
+                                            <div key={cidx} style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'hsl(var(--text))' }}>
+                                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'purple' }}></span>
+                                              {cause}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {diagnostic.suggestedSpareParts?.length > 0 && (
+                                        <div>
+                                          <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', fontWeight: 500, display: 'block', marginBottom: '0.5rem' }}>Suggested Spare Parts / Tools:</span>
+                                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {diagnostic.suggestedSpareParts.map((part: string, pidx: number) => (
+                                              <span key={pidx} style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: 'hsla(270, 50%, 40%, 0.1)', color: 'purple', fontWeight: 600 }}>
+                                                🔧 {part}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      <div style={{ fontSize: '0.7rem', color: 'hsl(var(--text-muted))', marginTop: '0.5rem' }}>
+                                        AI analysis performed on {new Date(diagnostic.analyzedAt || req.createdAt).toLocaleString()}
+                                      </div>
+                                    </div>
+
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', borderTop: '1px solid hsl(var(--border))', paddingTop: '1rem', marginTop: '1rem', color: 'hsl(var(--text-muted))' }}>
+                                    <AlertTriangle size={16} />
+                                    <span style={{ fontSize: '0.85rem' }}>No automated AI diagnostics generated for this legacy request. Newly created requests will process automatically.</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
                         )}
-                        {(user?.role === 'admin' || user?.role === 'asset_manager') && req.status === 'In Progress' && (
-                          <button onClick={() => updateStatus(req._id, 'Resolved')} className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: 'hsl(var(--success))' }}>Mark Resolved</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>

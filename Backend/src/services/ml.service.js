@@ -16,8 +16,8 @@ const mlClient = axios.create({
  * POST /analyze-maintenance
  * Analyze a maintenance request and get AI insights.
  */
-const analyzeMaintenance = async (payload) => {
-  const response = await mlClient.post('/analyze-maintenance', payload);
+const analyzeMaintenance = async (payload, headers = {}) => {
+  const response = await mlClient.post('/analyze-maintenance', payload, { headers });
   return response.data;
 };
 
@@ -25,8 +25,8 @@ const analyzeMaintenance = async (payload) => {
  * POST /asset-health
  * Get health score for an asset based on its history.
  */
-const getAssetHealth = async (payload) => {
-  const response = await mlClient.post('/asset-health', payload);
+const getAssetHealth = async (payload, headers = {}) => {
+  const response = await mlClient.post('/asset-health', payload, { headers });
   return response.data;
 };
 
@@ -34,8 +34,8 @@ const getAssetHealth = async (payload) => {
  * POST /predict-maintenance
  * Predict when an asset will next need maintenance.
  */
-const predictMaintenance = async (payload) => {
-  const response = await mlClient.post('/predict-maintenance', payload);
+const predictMaintenance = async (payload, headers = {}) => {
+  const response = await mlClient.post('/predict-maintenance', payload, { headers });
   return response.data;
 };
 
@@ -43,8 +43,8 @@ const predictMaintenance = async (payload) => {
  * POST /chat
  * Chat with the AI assistant (proxied from frontend via backend).
  */
-const chat = async (payload) => {
-  const response = await mlClient.post('/chat', payload);
+const chat = async (payload, headers = {}) => {
+  const response = await mlClient.post('/chat', payload, { headers });
   return response.data;
 };
 

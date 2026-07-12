@@ -5,6 +5,7 @@ const asyncHandler = require('../middlewares/asyncHandler');
 const activityLogService = require('../services/activityLog.service');
 const { uploadBufferToCloudinary } = require('../services/upload.service');
 const { createNotification } = require('../services/notification.service');
+const mlService = require('../services/ml.service');
 const {
   sendSuccess,
   sendCreated,
@@ -25,7 +26,7 @@ exports.raiseMaintenance = asyncHandler(async (req, res) => {
 
   let { assetId, description, priority, photo } = req.body;
 
-  const asset = await Asset.findById(assetId);
+  const asset = await Asset.findById(assetId).populate('categoryId', 'name');
   if (!asset || asset.isDeleted) {
     return sendNotFound(res, 'Asset not found');
   }
@@ -44,6 +45,36 @@ exports.raiseMaintenance = asyncHandler(async (req, res) => {
     }
   }
 
+  // Run AI Diagnostic analysis
+  let aiDiagnostic = null;
+  try {
+    const aiResult = await mlService.analyzeMaintenance({
+      description,
+      asset: {
+        name: asset.name,
+        condition: asset.condition,
+        categoryId: asset.categoryId,
+        manufacturer: asset.manufacturer,
+        modelNumber: asset.modelNumber,
+        location: asset.location
+      }
+    });
+    if (aiResult && aiResult.success && aiResult.data) {
+      aiDiagnostic = {
+        recommendedPriority: aiResult.data.recommendedPriority,
+        probableCauses: aiResult.data.probableCauses,
+        suggestedActions: aiResult.data.suggestedActions,
+        suggestedSpareParts: aiResult.data.suggestedSpareParts,
+        analyzedAt: new Date()
+      };
+      if (aiResult.data.recommendedPriority) {
+        priority = aiResult.data.recommendedPriority;
+      }
+    }
+  } catch (err) {
+    console.warn('[MaintenanceController] AI Maintenance analysis failed:', err.message);
+  }
+
   const request = await MaintenanceRequest.create({
     assetId,
     raisedBy: req.user._id,
@@ -51,6 +82,7 @@ exports.raiseMaintenance = asyncHandler(async (req, res) => {
     priority: priority || 'Medium',
     photo: photo || null,
     status: 'Pending',
+    aiDiagnostic
   });
 
   // Log activity

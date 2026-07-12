@@ -10,7 +10,8 @@ import {
   Calendar, 
   Wrench,
   FileCheck,
-  BarChart3
+  BarChart3,
+  Sparkles
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -20,6 +21,7 @@ export default function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
+    { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: Sparkles, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
     { name: 'Assets', href: '/dashboard/assets', icon: Package, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
     { name: 'Bookings', href: '/dashboard/bookings', icon: Calendar, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
     { name: 'Maintenance', href: '/dashboard/maintenance', icon: Wrench, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
