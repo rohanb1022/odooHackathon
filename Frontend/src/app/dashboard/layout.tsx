@@ -37,21 +37,43 @@ export default function DashboardLayout({
 
   if (isCheckingAuth) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: '40px', height: '40px', border: '4px solid hsl(var(--border))', borderTopColor: 'hsl(var(--primary))', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+      <div style={{
+        display: 'flex', height: '100vh',
+        alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: '1rem',
+        background: 'hsl(var(--background))',
+      }}>
+        <div style={{
+          width: 36, height: 36,
+          border: '3px solid hsl(var(--border))',
+          borderTopColor: 'hsl(var(--primary))',
+          borderRadius: '50%',
+          animation: 'spin .75s linear infinite',
+        }} />
+        <p style={{ fontSize: '.875rem', color: 'hsl(var(--text-muted))', fontFamily: 'var(--font-sans)' }}>
+          Loading AssetFlow…
+        </p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  if (!user) return null; // Prevent rendering if not authenticated and redirect is happening
+  if (!user) return null;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'hsl(var(--background))' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(var(--background))' }}>
       <Sidebar />
-      <div style={{ flex: 1, marginLeft: 'var(--sidebar-width)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        flex: 1,
+        marginLeft: 'var(--sidebar-width)',
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 0,
+        transition: 'margin-left .22s cubic-bezier(.4,0,.2,1)',
+      }}>
         <Header />
-        <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div className="animate-fade-in">
+        <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', minWidth: 0 }}>
+          <div className="animate-fade-in" style={{ maxWidth: 1400 }}>
             {children}
           </div>
         </main>

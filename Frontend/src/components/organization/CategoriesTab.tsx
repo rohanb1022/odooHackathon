@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X } from 'lucide-react';
 import api from '@/lib/axios';
+import { toast } from 'react-toastify';
 
 interface Category {
   _id: string;
@@ -44,13 +45,14 @@ export default function CategoriesTab() {
         customFields: []
       });
       if (data.success) {
+        toast.success('Category added successfully!');
         setIsModalOpen(false);
         setNewCategoryName('');
         setNewCategoryDesc('');
         fetchCategories();
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to add category');
+      toast.error(error.response?.data?.message || 'Failed to add category');
     }
   };
 

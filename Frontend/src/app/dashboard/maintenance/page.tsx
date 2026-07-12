@@ -15,9 +15,16 @@ import {
   ArrowRight,
   ShieldCheck,
   Tag,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
+import PromptModal from '@/components/ui/PromptModal';
+import { toast } from 'react-toastify';
 
 interface MaintenanceItem {
   _id: string;
@@ -50,6 +57,13 @@ interface MaintenanceItem {
   resolvedAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  aiDiagnostic?: {
+    recommendedPriority?: string;
+    probableCauses?: string[];
+    suggestedActions?: string[];
+    suggestedSpareParts?: string[];
+    analyzedAt?: string;
+  };
 }
 
 export default function MaintenancePage() {
@@ -57,6 +71,9 @@ export default function MaintenancePage() {
   const [requests, setRequests] = useState<MaintenanceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+
+  // Row Expansion State for Table View AI Diagnostics
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -74,6 +91,10 @@ export default function MaintenancePage() {
   });
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [selectedTech, setSelectedTech] = useState('');
+
+  // Reject Modal State
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [requestToReject, setRequestToReject] = useState<string | null>(null);
 
   // Drag and Drop state
   const [draggedItem, setDraggedItem] = useState<MaintenanceItem | null>(null);
@@ -115,7 +136,7 @@ export default function MaintenancePage() {
       setAssets(data.data?.assets || data.data || []);
       setShowModal(true);
     } catch (error) {
-      alert('Failed to load assets');
+      toast.error('Failed to load assets');
     }
   };
 
@@ -127,39 +148,68 @@ export default function MaintenancePage() {
         description: requestForm.issueDescription,
         priority: requestForm.priority,
       });
-      alert('Maintenance request submitted successfully!');
+      toast.success('Maintenance request submitted successfully!');
       setShowModal(false);
       setRequestForm({ assetId: '', issueDescription: '', priority: 'Medium' });
       fetchRequests();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to submit request');
+      toast.error(error.response?.data?.message || 'Failed to submit request');
     }
   };
 
   const updateStatus = async (id: string, newStatus: string, extraData: any = {}) => {
     try {
+      if (newStatus === 'Rejected' && !extraData.rejectionReason) {
+        setRequestToReject(id);
+        setRejectModalOpen(true);
+        return;
+      }
+
       setRequests((prev) =>
         prev.map((item) => (item._id === id ? { ...item, status: newStatus as any, ...extraData } : item))
       );
 
       await api.patch(`/maintenance/${id}/status`, { status: newStatus, ...extraData });
+      toast.success(`Maintenance moved to ${newStatus}`);
       fetchRequests();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to update status');
+      toast.error(error.response?.data?.message || 'Failed to update status');
       fetchRequests();
     }
   };
 
+  const handleRejectSubmit = async (reason: string) => {
+    if (!reason || !requestToReject) return;
+    try {
+      await api.patch(`/maintenance/${requestToReject}/reject`, { rejectionReason: reason });
+      toast.success('Maintenance request rejected');
+      fetchRequests();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to reject maintenance request');
+    } finally {
+      setRejectModalOpen(false);
+      setRequestToReject(null);
+    }
+  };
+
   const handleAssignSubmit = async () => {
-    if (!selectedTech) return alert('Please select a technician');
+    if (!selectedTech) {
+      toast.error('Please select a technician');
+      return;
+    }
     try {
       await api.patch(`/maintenance/${assignModal.reqId}/assign`, { technicianId: selectedTech });
       setAssignModal({ open: false, reqId: '' });
       setSelectedTech('');
+      toast.success('Technician assigned successfully');
       fetchRequests();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to assign technician');
+      toast.error(error.response?.data?.message || 'Failed to assign technician');
     }
+  };
+
+  const toggleRow = (reqId: string) => {
+    setExpandedId(expandedId === reqId ? null : reqId);
   };
 
   // Drag & Drop Handlers
@@ -242,7 +292,7 @@ export default function MaintenancePage() {
             </h1>
           </div>
           <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>
-            Visual workflow for tracking equipment repairs, approvals, and resolution cycles.
+            Visual workflow for tracking equipment repairs, approvals, and AI diagnostic cycles.
           </p>
         </div>
 
@@ -497,6 +547,28 @@ export default function MaintenancePage() {
                               Asset: <strong style={{ color: isResolved ? '#065f46' : '#1e293b' }}>{assetName}</strong>
                             </div>
 
+                            {/* AI Diagnostic Badge if available */}
+                            {item.aiDiagnostic && (
+                              <div
+                                style={{
+                                  backgroundColor: '#f5f3ff',
+                                  border: '1px solid #ddd6fe',
+                                  color: '#6d28d9',
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  marginBottom: '10px',
+                                }}
+                              >
+                                <Sparkles size={13} color="#7c3aed" />
+                                <span>AI Analyzed Fault</span>
+                              </div>
+                            )}
+
                             {/* Dynamic Bottom Info / Sketch Notes */}
                             {item.status === 'Assigned' && (
                               <div
@@ -727,7 +799,7 @@ export default function MaintenancePage() {
           </div>
         </>
       ) : (
-        /* ─── TABLE VIEW FALLBACK (Premium Redesign) ─── */
+        /* ─── TABLE VIEW FALLBACK (Premium Redesign with AI Diagnostics Support) ─── */
         <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', border: '1px solid #cbd5e1', overflow: 'hidden', boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)' }}>
           {/* Table Top Summary Header */}
           <div style={{ padding: '16px 24px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
@@ -738,7 +810,7 @@ export default function MaintenancePage() {
               </span>
             </div>
             <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-              Status updates instantly synchronize with your inventory & booking allocation engines.
+              Click any row to view automated AI diagnostic suggestions & root cause analysis.
             </div>
           </div>
 
@@ -749,6 +821,7 @@ export default function MaintenancePage() {
               <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                    <th style={{ padding: '16px 20px', width: '30px' }}></th>
                     <th style={{ padding: '16px 20px', fontWeight: 800, whiteSpace: 'nowrap' }}>Asset Equipment</th>
                     <th style={{ padding: '16px 20px', fontWeight: 800 }}>Issue Description</th>
                     <th style={{ padding: '16px 20px', fontWeight: 800, whiteSpace: 'nowrap' }}>Reported By</th>
@@ -761,7 +834,7 @@ export default function MaintenancePage() {
                 <tbody>
                   {requests.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '14px' }}>
+                      <td colSpan={8} style={{ padding: '48px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '14px' }}>
                         No maintenance requests recorded in the system.
                       </td>
                     </tr>
@@ -774,216 +847,285 @@ export default function MaintenancePage() {
                       const reporterName = getTechName(req.raisedBy);
                       const techName = req.technicianId ? getTechName(req.technicianId) : null;
                       const initialReporter = reporterName.charAt(0).toUpperCase();
+                      const isExpanded = expandedId === req._id;
 
                       return (
-                        <tr
-                          key={req._id}
-                          style={{
-                            borderBottom: '1px solid #f1f5f9',
-                            backgroundColor: isResolved ? '#fafcfb' : '#ffffff',
-                            transition: 'background-color 0.15s ease',
-                          }}
-                        >
-                          {/* Column 1: Asset Tag Pill + Asset Name */}
-                          <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <span
-                                style={{
-                                  backgroundColor: '#0f172a',
-                                  color: '#ffffff',
-                                  fontSize: '11px',
-                                  fontWeight: 800,
-                                  padding: '4px 8px',
-                                  borderRadius: '6px',
-                                  letterSpacing: '0.5px',
-                                }}
-                              >
-                                {assetTag}
-                              </span>
-                              <span style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>
-                                {assetName}
-                              </span>
-                            </div>
-                          </td>
+                        <React.Fragment key={req._id}>
+                          <tr
+                            onClick={() => toggleRow(req._id)}
+                            style={{
+                              borderBottom: isExpanded ? 'none' : '1px solid #f1f5f9',
+                              backgroundColor: isResolved ? '#fafcfb' : isExpanded ? '#f8fafc' : '#ffffff',
+                              transition: 'background-color 0.15s ease',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <td style={{ padding: '16px 0 16px 20px', color: '#64748b' }}>
+                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            </td>
 
-                          {/* Column 2: Issue Description */}
-                          <td style={{ padding: '16px 20px', maxWidth: '300px', color: '#334155', fontWeight: 600, fontSize: '13px', lineHeight: 1.4 }}>
-                            {req.description}
-                          </td>
-
-                          {/* Column 3: Reported By with Avatar */}
-                          <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span
-                                style={{
-                                  width: '26px',
-                                  height: '26px',
-                                  borderRadius: '9999px',
-                                  backgroundColor: '#e2e8f0',
-                                  color: '#334155',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '12px',
-                                  fontWeight: 800,
-                                }}
-                              >
-                                {initialReporter}
-                              </span>
-                              <span style={{ fontSize: '13px', color: '#475569', fontWeight: 500 }}>{reporterName}</span>
-                            </div>
-                          </td>
-
-                          {/* Column 4: Technician */}
-                          <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                            {techName ? (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#f3e8ff', border: '1px solid #e9d5ff', color: '#6b21a8', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}>
-                                <UserCheck size={14} color="#7e22ce" />
-                                <span>{techName}</span>
+                            {/* Column 1: Asset Tag Pill + Asset Name */}
+                            <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span
+                                  style={{
+                                    backgroundColor: '#0f172a',
+                                    color: '#ffffff',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    letterSpacing: '0.5px',
+                                  }}
+                                >
+                                  {assetTag}
+                                </span>
+                                <span style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>
+                                  {assetName}
+                                </span>
                               </div>
-                            ) : (
-                              <span style={{ display: 'inline-block', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', color: '#94a3b8', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600 }}>
-                                Unassigned
-                              </span>
-                            )}
-                          </td>
+                            </td>
 
-                          {/* Column 5: Priority with Dot Indicator */}
-                          <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                padding: '4px 10px',
-                                borderRadius: '9999px',
-                                fontSize: '11px',
-                                fontWeight: 800,
-                                textTransform: 'uppercase',
-                                backgroundColor: req.priority === 'Critical' || req.priority === 'High' ? '#ffe4e6' : req.priority === 'Medium' ? '#dbeafe' : '#f1f5f9',
-                                color: req.priority === 'Critical' || req.priority === 'High' ? '#be123c' : req.priority === 'Medium' ? '#1d4ed8' : '#475569',
-                              }}
-                            >
-                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }} />
-                              {req.priority}
-                            </span>
-                          </td>
+                            {/* Column 2: Issue Description */}
+                            <td style={{ padding: '16px 20px', maxWidth: '300px', color: '#334155', fontWeight: 600, fontSize: '13px', lineHeight: 1.4 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{req.description}</span>
+                                {req.aiDiagnostic && (
+                                  <span title="AI Diagnostic Available" style={{ display: 'inline-flex', alignItems: 'center', color: '#7c3aed', backgroundColor: '#f3e8ff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 800 }}>
+                                    <Sparkles size={11} /> AI
+                                  </span>
+                                )}
+                              </div>
+                            </td>
 
-                          {/* Column 6: Status Pill (Strictly NoWrap) */}
-                          <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                padding: '5px 12px',
-                                borderRadius: '9999px',
-                                fontSize: '12px',
-                                fontWeight: 800,
-                                whiteSpace: 'nowrap',
-                                backgroundColor:
-                                  req.status === 'Resolved'
-                                    ? '#dcfce7'
-                                    : req.status === 'Pending'
-                                    ? '#fef3c7'
-                                    : req.status === 'Approved'
-                                    ? '#dbeafe'
-                                    : req.status === 'Assigned'
-                                    ? '#f3e8ff'
-                                    : req.status === 'In Progress'
-                                    ? '#cffafe'
-                                    : '#fee2e2',
-                                color:
-                                  req.status === 'Resolved'
-                                    ? '#065f46'
-                                    : req.status === 'Pending'
-                                    ? '#92400e'
-                                    : req.status === 'Approved'
-                                    ? '#1e40af'
-                                    : req.status === 'Assigned'
-                                    ? '#6b21a8'
-                                    : req.status === 'In Progress'
-                                    ? '#155e75'
-                                    : '#b91c1c',
-                                border: req.status === 'Resolved' ? '1px solid #bbf7d0' : 'none',
-                              }}
-                            >
-                              {req.status}
-                            </span>
-                          </td>
+                            {/* Column 3: Reported By with Avatar */}
+                            <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span
+                                  style={{
+                                    width: '26px',
+                                    height: '26px',
+                                    borderRadius: '9999px',
+                                    backgroundColor: '#e2e8f0',
+                                    color: '#334155',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '12px',
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  {initialReporter}
+                                </span>
+                                <span style={{ fontSize: '13px', color: '#475569', fontWeight: 500 }}>{reporterName}</span>
+                              </div>
+                            </td>
 
-                          {/* Column 7: Quick Actions */}
-                          <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {!isResolved && !isRejected && (['Admin', 'admin', 'Asset Manager', 'asset_manager'].includes(user?.role as string) || req.technicianId?._id === user?._id) ? (
-                                <>
-                                  {req.status === 'Pending' && (
-                                    <>
-                                      <button
-                                        onClick={() => updateStatus(req._id, 'Approved')}
-                                        style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '6px 14px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)' }}
-                                      >
-                                        Approve <ArrowRight size={12} />
-                                      </button>
-                                      <button
-                                        onClick={() => updateStatus(req._id, 'Rejected')}
-                                        style={{ backgroundColor: '#ffe4e6', color: '#be123c', padding: '6px 10px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}
-                                      >
-                                        Reject
-                                      </button>
-                                    </>
-                                  )}
-
-                                  {req.status === 'Approved' && (
-                                    <>
-                                      <button
-                                        onClick={() => setAssignModal({ open: true, reqId: req._id })}
-                                        style={{ backgroundColor: '#f3e8ff', border: '1px solid #e9d5ff', color: '#6b21a8', padding: '6px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
-                                      >
-                                        <UserPlus size={13} /> Assign Tech
-                                      </button>
-                                      <button
-                                        onClick={() => updateStatus(req._id, 'In Progress')}
-                                        style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '6px 14px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)' }}
-                                      >
-                                        Start <PlayCircle size={13} />
-                                      </button>
-                                    </>
-                                  )}
-
-                                  {req.status === 'Assigned' && (
-                                    <button
-                                      onClick={() => updateStatus(req._id, 'In Progress')}
-                                      style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '6px 16px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)' }}
-                                    >
-                                      Start Work <PlayCircle size={13} />
-                                    </button>
-                                  )}
-
-                                  {req.status === 'In Progress' && (
-                                    <button
-                                      onClick={() => updateStatus(req._id, 'Resolved')}
-                                      style={{ backgroundColor: '#059669', color: '#ffffff', padding: '6px 16px', borderRadius: '8px', border: 'none', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)' }}
-                                    >
-                                      Mark Resolved <CheckCircle2 size={13} />
-                                    </button>
-                                  )}
-                                </>
+                            {/* Column 4: Technician */}
+                            <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
+                              {techName ? (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#f3e8ff', border: '1px solid #e9d5ff', color: '#6b21a8', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}>
+                                  <UserCheck size={14} color="#7e22ce" />
+                                  <span>{techName}</span>
+                                </div>
                               ) : (
-                                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  {isResolved ? (
-                                    <>
-                                      <CheckCircle2 size={14} color="#059669" />
-                                      <span style={{ color: '#065f46' }}>Completed</span>
-                                    </>
-                                  ) : isRejected ? (
-                                    <span style={{ color: '#be123c' }}>Rejected</span>
-                                  ) : (
-                                    '--'
-                                  )}
+                                <span style={{ display: 'inline-block', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', color: '#94a3b8', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600 }}>
+                                  Unassigned
                                 </span>
                               )}
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+
+                            {/* Column 5: Priority with Dot Indicator */}
+                            <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '4px 10px',
+                                  borderRadius: '9999px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  textTransform: 'uppercase',
+                                  backgroundColor: req.priority === 'Critical' || req.priority === 'High' ? '#ffe4e6' : req.priority === 'Medium' ? '#dbeafe' : '#f1f5f9',
+                                  color: req.priority === 'Critical' || req.priority === 'High' ? '#be123c' : req.priority === 'Medium' ? '#1d4ed8' : '#475569',
+                                }}
+                              >
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }} />
+                                {req.priority}
+                              </span>
+                            </td>
+
+                            {/* Column 6: Status Pill (Strictly NoWrap) */}
+                            <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '5px 12px',
+                                  borderRadius: '9999px',
+                                  fontSize: '12px',
+                                  fontWeight: 800,
+                                  whiteSpace: 'nowrap',
+                                  backgroundColor:
+                                    req.status === 'Resolved'
+                                      ? '#dcfce7'
+                                      : req.status === 'Pending'
+                                      ? '#fef3c7'
+                                      : req.status === 'Approved'
+                                      ? '#dbeafe'
+                                      : req.status === 'Assigned'
+                                      ? '#f3e8ff'
+                                      : req.status === 'In Progress'
+                                      ? '#cffafe'
+                                      : '#fee2e2',
+                                  color:
+                                    req.status === 'Resolved'
+                                      ? '#065f46'
+                                      : req.status === 'Pending'
+                                      ? '#92400e'
+                                      : req.status === 'Approved'
+                                      ? '#1e40af'
+                                      : req.status === 'Assigned'
+                                      ? '#6b21a8'
+                                      : req.status === 'In Progress'
+                                      ? '#155e75'
+                                      : '#b91c1c',
+                                  border: req.status === 'Resolved' ? '1px solid #bbf7d0' : 'none',
+                                }}
+                              >
+                                {req.status}
+                              </span>
+                            </td>
+
+                            {/* Column 7: Quick Actions */}
+                            <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {!isResolved && !isRejected && (['Admin', 'admin', 'Asset Manager', 'asset_manager'].includes(user?.role as string) || req.technicianId?._id === user?._id) ? (
+                                  <>
+                                    {req.status === 'Pending' && (
+                                      <>
+                                        <button
+                                          onClick={() => updateStatus(req._id, 'Approved')}
+                                          style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '6px 14px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)' }}
+                                        >
+                                          Approve <ArrowRight size={12} />
+                                        </button>
+                                        <button
+                                          onClick={() => updateStatus(req._id, 'Rejected')}
+                                          style={{ backgroundColor: '#ffe4e6', color: '#be123c', padding: '6px 10px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}
+                                        >
+                                          Reject
+                                        </button>
+                                      </>
+                                    )}
+
+                                    {req.status === 'Approved' && (
+                                      <>
+                                        <button
+                                          onClick={() => setAssignModal({ open: true, reqId: req._id })}
+                                          style={{ backgroundColor: '#f3e8ff', border: '1px solid #e9d5ff', color: '#6b21a8', padding: '6px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
+                                        >
+                                          <UserPlus size={13} /> Assign Tech
+                                        </button>
+                                        <button
+                                          onClick={() => updateStatus(req._id, 'In Progress')}
+                                          style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '6px 14px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)' }}
+                                        >
+                                          Start <PlayCircle size={13} />
+                                        </button>
+                                      </>
+                                    )}
+
+                                    {req.status === 'Assigned' && (
+                                      <button
+                                        onClick={() => updateStatus(req._id, 'In Progress')}
+                                        style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '6px 16px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)' }}
+                                      >
+                                        Start Work <PlayCircle size={13} />
+                                      </button>
+                                    )}
+
+                                    {req.status === 'In Progress' && (
+                                      <button
+                                        onClick={() => updateStatus(req._id, 'Resolved')}
+                                        style={{ backgroundColor: '#059669', color: '#ffffff', padding: '6px 16px', borderRadius: '8px', border: 'none', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5, 150, 105, 0.2)' }}
+                                      >
+                                        Mark Resolved <CheckCircle2 size={13} />
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    {isResolved ? (
+                                      <>
+                                        <CheckCircle2 size={14} color="#059669" />
+                                        <span style={{ color: '#065f46' }}>Completed</span>
+                                      </>
+                                    ) : isRejected ? (
+                                      <span style={{ color: '#be123c' }}>Rejected</span>
+                                    ) : (
+                                      '--'
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* Expanded Row for AI Diagnostics */}
+                          {isExpanded && (
+                            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                              <td colSpan={8} style={{ padding: '0 20px 20px 48px' }}>
+                                <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Sparkles size={16} color="#7c3aed" /> AI Maintenance Diagnostic Report
+                                  </h4>
+
+                                  {req.aiDiagnostic ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                                      <div>
+                                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>AI Recommended Priority:</span>
+                                        <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 800, backgroundColor: req.aiDiagnostic.recommendedPriority === 'High' || req.aiDiagnostic.recommendedPriority === 'Critical' ? '#ffe4e6' : '#dbeafe', color: req.aiDiagnostic.recommendedPriority === 'High' || req.aiDiagnostic.recommendedPriority === 'Critical' ? '#be123c' : '#1d4ed8' }}>
+                                          {req.aiDiagnostic.recommendedPriority || req.priority}
+                                        </span>
+                                      </div>
+
+                                      <div>
+                                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Probable Failure Root Causes:</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                          {req.aiDiagnostic.probableCauses?.map((cause: string, cidx: number) => (
+                                            <div key={cidx} style={{ fontSize: '13px', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}>
+                                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#7c3aed' }} />
+                                              {cause}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {req.aiDiagnostic.suggestedSpareParts && req.aiDiagnostic.suggestedSpareParts.length > 0 && (
+                                        <div>
+                                          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Suggested Spare Parts & Tools:</span>
+                                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                            {req.aiDiagnostic.suggestedSpareParts.map((part: string, pidx: number) => (
+                                              <span key={pidx} style={{ fontSize: '12px', padding: '4px 8px', borderRadius: '6px', backgroundColor: '#f3e8ff', color: '#6b21a8', fontWeight: 700 }}>
+                                                🔧 {part}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', color: '#64748b', fontSize: '13px' }}>
+                                      <AlertTriangle size={16} />
+                                      <span>No automated AI diagnostics generated for this request yet. New requests will be automatically analyzed upon submission.</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })
                   )}
@@ -1108,6 +1250,19 @@ export default function MaintenancePage() {
           </div>
         </div>
       )}
+
+      {/* ─── REJECT PROMPT MODAL ─── */}
+      <PromptModal
+        isOpen={rejectModalOpen}
+        title="Reject Maintenance Request"
+        message="Please provide a reason for rejecting this maintenance request:"
+        placeholder="Rejection reason..."
+        onConfirm={handleRejectSubmit}
+        onCancel={() => {
+          setRejectModalOpen(false);
+          setRequestToReject(null);
+        }}
+      />
     </div>
   );
 }

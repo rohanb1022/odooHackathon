@@ -4,120 +4,171 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
-import { Plus } from 'lucide-react';
+import { Plus, FileCheck, ExternalLink, ChevronRight } from 'lucide-react';
+import PromptModal from '@/components/ui/PromptModal';
+import { toast } from 'react-toastify';
+
+function getBadgeClass(status: string) {
+  if (status === 'Closed' || status === 'Completed') return 'badge badge-completed';
+  if (status === 'Open' || status === 'Active')      return 'badge badge-ongoing';
+  return 'badge badge-pending';
+}
+
+function SkeletonRow() {
+  return (
+    <tr>
+      {[...Array(6)].map((_, i) => (
+        <td key={i} style={{ padding: '.875rem 1rem' }}>
+          <div className="skeleton" style={{ height: 14, width: i === 0 ? '70%' : '55%', borderRadius: 4 }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
 
 export default function AuditsPage() {
-  const user = useAuthStore(state => state.user);
+  const user = useAuthStore(s => s.user);
   const router = useRouter();
-  const [audits, setAudits] = useState<any[]>([]);
+  const [audits, setAudits]       = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchAudits();
-  }, []);
+  useEffect(() => { fetchAudits(); }, []);
 
   const fetchAudits = async () => {
     try {
       const { data } = await api.get('/audit-cycles');
       setAudits(data.data.auditCycles || []);
-    } catch (error) {
-      console.error('Failed to fetch audits', error);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch {}
+    finally { setIsLoading(false); }
   };
 
-  const handleCreateAudit = async () => {
-    const title = prompt('Enter Audit Cycle Name:');
+  const handleCreateAudit = () => {
+    setCreateModalOpen(true);
+  };
+
+  const submitCreateAudit = async (title: string) => {
     if (!title) return;
     try {
       await api.post('/audit-cycles', {
         title,
         dateRangeStart: new Date().toISOString(),
-        dateRangeEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week
-        scopeType: 'all'
+        dateRangeEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        scopeType: 'all',
       });
-      alert('Audit cycle created');
+      toast.success('Audit Cycle Created!');
       fetchAudits();
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to create audit');
+    } catch (err: any) { 
+      toast.error(err.response?.data?.message || 'Failed to create audit'); 
+    } finally {
+      setCreateModalOpen(false);
     }
   };
 
+  const canManage = user?.role === 'admin' || user?.role === 'asset_manager';
+
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+      <div className="page-header">
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Asset Audits</h1>
-          <p style={{ color: 'hsl(var(--text-muted))', marginTop: '0.25rem' }}>Run structured verification cycles.</p>
+          <h1 className="page-title">Asset Audits</h1>
+          <p className="page-subtitle">Run structured verification cycles to ensure asset accuracy.</p>
         </div>
-        
-        {(user?.role === 'admin' || user?.role === 'asset_manager') && (
-          <button className="btn btn-primary" onClick={handleCreateAudit} style={{ gap: '0.5rem' }}>
-            <Plus size={16} /> New Audit Cycle
+        {canManage && (
+          <button className="btn btn-primary" onClick={handleCreateAudit}>
+            <Plus size={15} /> New Audit Cycle
           </button>
         )}
       </div>
 
-      <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
-        {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'hsl(var(--text-muted))' }}>Loading audits...</div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid hsl(var(--border))', color: 'hsl(var(--text-muted))', backgroundColor: 'hsla(var(--surface), 0.5)' }}>
-                  <th style={{ padding: '1rem', fontWeight: 500 }}>Audit Name</th>
-                  <th style={{ padding: '1rem', fontWeight: 500 }}>Start Date</th>
-                  <th style={{ padding: '1rem', fontWeight: 500 }}>End Date</th>
-                  <th style={{ padding: '1rem', fontWeight: 500 }}>Status</th>
-                  <th style={{ padding: '1rem', fontWeight: 500 }}>Auditors</th>
-                  <th style={{ padding: '1rem', fontWeight: 500 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {audits.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>
-                      No audit cycles found.
+      {/* Summary cards */}
+      {!isLoading && audits.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px,1fr))', gap: '1rem' }}>
+          {[
+            { label: 'Total Cycles',    value: audits.length,                                        color: '#4F46E5', bg: 'rgb(79,70,229/.08)' },
+            { label: 'Active',          value: audits.filter(a => a.status !== 'Closed').length,     color: '#0EA5E9', bg: 'rgb(14,165,233/.08)' },
+            { label: 'Closed',          value: audits.filter(a => a.status === 'Closed').length,     color: '#10B981', bg: 'rgb(16,185,129/.08)' },
+          ].map(card => (
+            <div key={card.label} style={{ background: card.bg, border: `1px solid ${card.color}22`, borderRadius: 12, padding: '1rem 1.25rem' }}>
+              <p style={{ fontSize: '1.6rem', fontWeight: 800, color: card.color, letterSpacing: '-.03em' }}>{card.value}</p>
+              <p style={{ fontSize: '.78rem', color: 'hsl(var(--text-muted))', marginTop: 2, fontWeight: 500 }}>{card.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Audit Name</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Scope</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading
+                ? [...Array(4)].map((_, i) => <SkeletonRow key={i} />)
+                : audits.length === 0
+                ? (
+                  <tr><td colSpan={6}>
+                    <div className="empty-state">
+                      <div className="empty-state-icon"><FileCheck size={22} /></div>
+                      <p className="empty-state-title">No audit cycles</p>
+                      <p className="empty-state-desc">Create a new audit cycle to begin verifying assets.</p>
+                    </div>
+                  </td></tr>
+                )
+                : audits.map(audit => (
+                  <tr key={audit._id} style={{ cursor: 'pointer' }} onClick={() => router.push(`/dashboard/audits/${audit._id}`)}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '.625rem' }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 7, background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <FileCheck size={14} color="#4F46E5" />
+                        </div>
+                        <span style={{ fontWeight: 600 }}>{audit.title}</span>
+                      </div>
+                    </td>
+                    <td style={{ color: 'hsl(var(--text-secondary))', fontSize: '.8125rem' }}>
+                      {new Date(audit.dateRangeStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td style={{ color: 'hsl(var(--text-secondary))', fontSize: '.8125rem' }}>
+                      {new Date(audit.dateRangeEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '.8rem', color: 'hsl(var(--text-secondary))', background: 'hsl(var(--surface-raised))', padding: '.15rem .5rem', borderRadius: 5, border: '1px solid hsl(var(--border))', textTransform: 'capitalize' }}>
+                        {audit.scopeType}
+                      </span>
+                    </td>
+                    <td><span className={getBadgeClass(audit.status)}>{audit.status}</span></td>
+                    <td onClick={e => e.stopPropagation()}>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => router.push(`/dashboard/audits/${audit._id}`)}
+                      >
+                        View Details <ChevronRight size={12} />
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  audits.map(audit => (
-                    <tr key={audit._id} style={{ borderBottom: '1px solid hsl(var(--border))' }}>
-                      <td style={{ padding: '1rem', fontWeight: 500 }}>{audit.title}</td>
-                      <td style={{ padding: '1rem' }}>{new Date(audit.dateRangeStart).toLocaleDateString()}</td>
-                      <td style={{ padding: '1rem' }}>{new Date(audit.dateRangeEnd).toLocaleDateString()}</td>
-                      <td style={{ padding: '1rem' }}>
-                        <span style={{ 
-                          padding: '0.25rem 0.6rem', 
-                          borderRadius: '9999px', 
-                          fontSize: '0.75rem', 
-                          fontWeight: 500,
-                          backgroundColor: audit.status === 'Completed' ? 'hsla(var(--success), 0.1)' : 'hsla(var(--info), 0.1)',
-                          color: audit.status === 'Completed' ? 'hsl(var(--success))' : 'hsl(var(--info))'
-                        }}>
-                          {audit.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '1rem' }}>{audit.assignedAuditors?.length || 0}</td>
-                      <td style={{ padding: '1rem' }}>
-                        <button 
-                          className="btn btn-outline" 
-                          style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
-                          onClick={() => router.push(`/dashboard/audits/${audit._id}`)}
-                        >
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
+      <PromptModal 
+        isOpen={createModalOpen}
+        title="Create Audit Cycle"
+        message="Enter a name for the new Audit Cycle:"
+        placeholder="e.g. Q3 IT Hardware Audit"
+        onConfirm={submitCreateAudit}
+        onCancel={() => setCreateModalOpen(false)}
+      />
     </div>
   );
 }

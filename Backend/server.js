@@ -41,6 +41,7 @@ const dashboardRoutes = require('./src/routes/dashboard.routes');
 const reportRoutes = require('./src/routes/report.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
 const activityLogRoutes = require('./src/routes/activityLog.routes');
+const aiRoutes = require('./src/routes/ai.routes');
 
 // ─── App Setup ─────────────────────────────────────────────────────────────────
 const app = express();
@@ -109,6 +110,7 @@ app.use(`${API}/dashboard`, dashboardRoutes);
 app.use(`${API}/reports`, reportRoutes);
 app.use(`${API}/notifications`, notificationRoutes);
 app.use(`${API}/activity-logs`, activityLogRoutes);
+app.use(`${API}/ai`, aiRoutes);
 
 // ─── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {

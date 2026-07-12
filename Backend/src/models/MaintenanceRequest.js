@@ -57,6 +57,20 @@ const maintenanceRequestSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    aiDiagnostic: {
+      recommendedPriority: {
+        type: String,
+        enum: ['Low', 'Medium', 'High', 'Critical'],
+        default: null,
+      },
+      probableCauses: [String],
+      suggestedActions: String,
+      suggestedSpareParts: [String],
+      analyzedAt: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,
