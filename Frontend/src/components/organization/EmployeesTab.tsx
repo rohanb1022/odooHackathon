@@ -37,7 +37,7 @@ export default function EmployeesTab() {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      await api.patch(`/users/${userId}/role`, { role: newRole });
+      await api.patch(`/users/${userId}/promote`, { role: newRole });
       // Optimistically update
       setEmployees(employees.map(emp => emp._id === userId ? { ...emp, role: newRole } : emp));
     } catch (error) {
@@ -108,10 +108,10 @@ export default function EmployeesTab() {
                           fontSize: '0.875rem'
                         }}
                       >
-                        <option value="Employee">Employee</option>
-                        <option value="Department Head">Department Head</option>
-                        <option value="Asset Manager">Asset Manager</option>
-                        <option value="Admin">Admin</option>
+                        <option value="employee">Employee</option>
+                        <option value="department_head">Department Head</option>
+                        <option value="asset_manager">Asset Manager</option>
+                        <option value="admin">Admin</option>
                       </select>
                     </td>
                     <td style={{ padding: '1rem' }}>

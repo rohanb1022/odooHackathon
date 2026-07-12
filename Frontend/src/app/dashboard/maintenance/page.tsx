@@ -22,7 +22,7 @@ export default function MaintenancePage() {
   const fetchRequests = async () => {
     try {
       // If user is Admin/Asset Manager, fetch all. Otherwise fetch user's requests.
-      const url = (user?.role === 'Admin' || user?.role === 'Asset Manager') 
+      const url = (user?.role === 'admin' || user?.role === 'asset_manager') 
         ? '/maintenance' 
         : `/maintenance?reportedBy=${user?._id}`;
       const { data } = await api.get(url);
@@ -147,13 +147,13 @@ export default function MaintenancePage() {
                         </span>
                       </td>
                       <td style={{ padding: '1rem' }}>
-                        {(user?.role === 'Admin' || user?.role === 'Asset Manager') && req.status === 'Pending' && (
+                        {(user?.role === 'admin' || user?.role === 'asset_manager') && req.status === 'Pending' && (
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button onClick={() => updateStatus(req._id, 'Approved')} className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>Approve</button>
                             <button onClick={() => updateStatus(req._id, 'Rejected')} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>Reject</button>
                           </div>
                         )}
-                        {(user?.role === 'Admin' || user?.role === 'Asset Manager') && req.status === 'In Progress' && (
+                        {(user?.role === 'admin' || user?.role === 'asset_manager') && req.status === 'In Progress' && (
                           <button onClick={() => updateStatus(req._id, 'Resolved')} className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: 'hsl(var(--success))' }}>Mark Resolved</button>
                         )}
                       </td>

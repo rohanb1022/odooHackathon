@@ -28,7 +28,7 @@ export default function AllocationsPage() {
         const { data } = await api.get('/transfer-requests');
         setTransfers(data.data);
       } else {
-        const url = activeTab === 'all-allocations' && (user?.role === 'Admin' || user?.role === 'Asset Manager') 
+        const url = activeTab === 'all-allocations' && (user?.role === 'admin' || user?.role === 'asset_manager') 
           ? '/allocations' 
           : `/allocations?user=${user?._id}`;
         const { data } = await api.get(url);
@@ -106,7 +106,7 @@ export default function AllocationsPage() {
           <p style={{ color: 'hsl(var(--text-muted))', marginTop: '0.25rem' }}>Manage asset assignments and transfer requests.</p>
         </div>
         
-        {(user?.role === 'Admin' || user?.role === 'Asset Manager') && (
+        {(user?.role === 'admin' || user?.role === 'asset_manager') && (
           <button className="btn btn-primary" onClick={loadAllocateData}>Allocate Asset</button>
         )}
       </div>
@@ -123,7 +123,7 @@ export default function AllocationsPage() {
             }}>
             My Allocations
           </button>
-          {(user?.role === 'Admin' || user?.role === 'Asset Manager') && (
+          {(user?.role === 'admin' || user?.role === 'asset_manager') && (
             <button 
               onClick={() => setActiveTab('all-allocations')}
               style={{ 
@@ -210,7 +210,7 @@ export default function AllocationsPage() {
                           <td style={{ padding: '1rem' }}>{tr.reason}</td>
                           <td style={{ padding: '1rem' }}>{tr.status}</td>
                           <td style={{ padding: '1rem' }}>
-                            {tr.status === 'Pending' && (user?.role === 'Asset Manager' || user?.role === 'Admin') && (
+                            {tr.status === 'Pending' && (user?.role === 'asset_manager' || user?.role === 'admin') && (
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>Approve</button>
                                 <button className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>Reject</button>

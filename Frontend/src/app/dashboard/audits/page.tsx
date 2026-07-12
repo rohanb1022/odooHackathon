@@ -50,7 +50,7 @@ export default function AuditsPage() {
           <p style={{ color: 'hsl(var(--text-muted))', marginTop: '0.25rem' }}>Run structured verification cycles.</p>
         </div>
         
-        {(user?.role === 'Admin' || user?.role === 'Asset Manager') && (
+        {(user?.role === 'admin' || user?.role === 'asset_manager') && (
           <button className="btn btn-primary" onClick={handleCreateAudit} style={{ gap: '0.5rem' }}>
             <Plus size={16} /> New Audit Cycle
           </button>
