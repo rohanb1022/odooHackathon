@@ -75,3 +75,20 @@ def test_predict_maintenance():
     assert "nextMaintenanceDate" in data
     assert "failureProbability" in data
     assert "reasoning" in data
+
+def test_audit_chat():
+    payload = {
+        "message": "List active audit cycles",
+        "history": [],
+        "user": {
+            "id": "user_id_123",
+            "name": "Sarah Auditor",
+            "role": "asset_manager"
+        }
+    }
+    res = client.post("/api/v1/audit-chat", json=payload)
+    assert res.status_code == 200
+    json_data = res.json()
+    assert json_data["success"] is True
+    assert "reply" in json_data
+    assert "actions" in json_data
