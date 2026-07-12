@@ -8,6 +8,7 @@ const {
   startMaintenance,
   resolveMaintenance,
   getAllMaintenance,
+  updateStatus,
 } = require('../controllers/maintenance.controller');
 const { verifyToken, isAdminOrManager } = require('../middlewares/auth.middleware');
 const {
@@ -28,6 +29,8 @@ router.patch('/:id/assign', isAdminOrManager, assignMaintenance);
 router.patch('/:id/reject', isAdminOrManager, rejectMaintenanceValidator, rejectMaintenance);
 router.patch('/:id/start', isAdminOrManager, startMaintenance);
 router.patch('/:id/resolve', isAdminOrManager, resolveMaintenanceValidator, resolveMaintenance);
+router.patch('/:id/status', updateStatus);
 
 module.exports = router;
+
 

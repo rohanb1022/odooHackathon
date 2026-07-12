@@ -359,3 +359,61 @@ exports.resolveMaintenance = asyncHandler(async (req, res) => {
 
   return sendSuccess(res, { maintenance: populated }, 'Maintenance request resolved and asset marked Available');
 });
+
+// ─── Direct Status Update (for Kanban Board Drag & Drop) ─────────────────────────
+
+/**
+ * @desc  Update maintenance request status directly (handles Kanban drag/drop and transitions)
+ * @route PATCH /api/v1/maintenance/:id/status
+ * @access Admin, Asset Manager, Assigned Technician
+ */
+exports.updateStatus = asyncHandler(async (req, res) => {
+  const { status, technicianId, resolutionNotes, rejectionReason } = req.body;
+  const request = await MaintenanceRequest.findById(req.params.id);
+  if (!request) return sendNotFound(res, 'Maintenance request not found');
+
+  if (!status) return sendBadRequest(res, 'Status is required');
+
+  const oldStatus = request.status;
+  request.status = status;
+
+  if (technicianId) request.technicianId = technicianId;
+  if (rejectionReason) request.rejectionReason = rejectionReason;
+  if (resolutionNotes) request.resolutionNotes = resolutionNotes;
+  if (status === 'Resolved' && !request.resolvedAt) request.resolvedAt = new Date();
+  if (['Approved', 'Assigned', 'In Progress'].includes(status) && !request.approvedBy) {
+    request.approvedBy = req.user._id;
+  }
+
+  await request.save();
+
+  // Business Rule: Sync asset status
+  const asset = await Asset.findById(request.assetId);
+  if (asset) {
+    if (['Approved', 'Assigned', 'In Progress'].includes(status)) {
+      asset.status = 'Under Maintenance';
+      await asset.save();
+    } else if (status === 'Resolved') {
+      asset.status = 'Available';
+      await asset.save();
+    }
+  }
+
+  await activityLogService.log({
+    actorId: req.user._id,
+    action: `MAINTENANCE_${status.toUpperCase().replace(/\s+/g, '_')}`,
+    targetModel: 'MaintenanceRequest',
+    targetId: request._id,
+    meta: { oldStatus, newStatus: status, description: `Moved maintenance request for asset (${asset ? asset.assetTag : request.assetId}) to "${status}"` },
+    ipAddress: activityLogService.getIp(req),
+  });
+
+  const populated = await MaintenanceRequest.findById(request._id)
+    .populate('assetId', 'name assetTag location status condition')
+    .populate('raisedBy', 'firstName lastName email role')
+    .populate('technicianId', 'firstName lastName email role')
+    .populate('approvedBy', 'firstName lastName email role');
+
+  return sendSuccess(res, { maintenance: populated }, `Maintenance request status updated to ${status}`);
+});
+
