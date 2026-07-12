@@ -1,16 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const { createAuditCycle, assignAuditors, verifyAsset, closeAuditCycle, getAllAuditCycles } = require('../controllers/audit.controller');
+const {
+  createAuditCycle,
+  assignAuditors,
+  verifyAsset,
+  closeAuditCycle,
+  getAllAuditCycles,
+  getAuditCycleById,
+} = require('../controllers/audit.controller');
 const { verifyToken, isAdminOrManager } = require('../middlewares/auth.middleware');
+const {
+  createAuditCycleValidator,
+  assignAuditorsValidator,
+  verifyAssetValidator,
+} = require('../validators/audit.validator');
 
 router.use(verifyToken);
 
 router.route('/')
-  .post(isAdminOrManager, createAuditCycle)
+  .post(isAdminOrManager, createAuditCycleValidator, createAuditCycle)
   .get(getAllAuditCycles);
 
-router.post('/:id/assign', isAdminOrManager, assignAuditors);
-router.post('/:id/verify', verifyAsset);
+router.get('/:id', getAuditCycleById);
+router.post('/:id/assign', isAdminOrManager, assignAuditorsValidator, assignAuditors);
+router.post('/:id/verify', verifyAssetValidator, verifyAsset);
 router.post('/:id/close', isAdminOrManager, closeAuditCycle);
 
 module.exports = router;
+
