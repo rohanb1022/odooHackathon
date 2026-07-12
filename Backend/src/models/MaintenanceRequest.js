@@ -29,7 +29,7 @@ const maintenanceRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Pending', 'Approved', 'Rejected', 'In Progress', 'Resolved'],
+      enum: ['Pending', 'Approved', 'Assigned', 'Rejected', 'In Progress', 'Resolved'],
       default: 'Pending',
     },
     technicianId: {
