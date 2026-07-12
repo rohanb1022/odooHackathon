@@ -6,6 +6,7 @@ import api from '@/lib/axios';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import PromptModal from '@/components/ui/PromptModal';
 import { toast } from 'react-toastify';
+import Link from 'next/link';
 import { Repeat, ArrowLeftRight, Package, Plus, CheckCircle, X, RotateCcw } from 'lucide-react';
 
 function getBadgeClass(status: string) {
@@ -33,13 +34,13 @@ export default function AllocationsPage() {
   const user = useAuthStore(s => s.user);
   const [activeTab, setActiveTab] = useState<'my-allocations' | 'all-allocations' | 'transfers'>('my-allocations');
   const [allocations, setAllocations] = useState<any[]>([]);
-  const [transfers, setTransfers]     = useState<any[]>([]);
-  const [isLoading, setIsLoading]     = useState(true);
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [showAllocateModal, setShowAllocateModal] = useState(false);
-  const [assets, setAssets]       = useState<any[]>([]);
+  const [assets, setAssets] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
-  
+
   // Modals state
   const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
   const [transferPromptOpen, setTransferPromptOpen] = useState(false);
@@ -64,7 +65,7 @@ export default function AllocationsPage() {
         const { data } = await api.get(url);
         setAllocations(data.data);
       }
-    } catch {}
+    } catch { }
     finally { setIsLoading(false); }
   };
 
@@ -76,14 +77,14 @@ export default function AllocationsPage() {
       setShowAllocateModal(false);
       setAllocateForm({ assetId: '', allocatedToUser: '', expectedReturnDate: '', notes: '' });
       fetchData();
-    } catch (err: any) { 
+    } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to allocate asset';
       if (msg.includes('already allocated')) {
         setActiveAssetId(allocateForm.assetId);
         setTransferConfirmOpen(true);
         setShowAllocateModal(false);
-      } else { 
-        toast.error(msg); 
+      } else {
+        toast.error(msg);
       }
     }
   };
@@ -128,9 +129,9 @@ export default function AllocationsPage() {
   };
 
   const tabs = [
-    { id: 'my-allocations',  label: 'My Allocations',  icon: Package,       show: true },
-    { id: 'all-allocations', label: 'All Allocations',  icon: Repeat,        show: canManage },
-    { id: 'transfers',       label: 'Transfer Requests',icon: ArrowLeftRight, show: true },
+    { id: 'my-allocations', label: 'My Allocations', icon: Package, show: true },
+    { id: 'all-allocations', label: 'All Allocations', icon: Repeat, show: canManage },
+    { id: 'transfers', label: 'Transfer Requests', icon: ArrowLeftRight, show: true },
   ] as const;
 
   return (
@@ -142,9 +143,9 @@ export default function AllocationsPage() {
           <p className="page-subtitle">Manage asset assignments and transfer requests across the organization.</p>
         </div>
         {canManage && (
-          <button className="btn btn-primary" onClick={loadAllocateData}>
+          <Link href="/dashboard/allocations/new" className="btn btn-primary">
             <Plus size={15} /> Allocate Asset
-          </button>
+          </Link>
         )}
       </div>
 
@@ -186,47 +187,47 @@ export default function AllocationsPage() {
                   {isLoading
                     ? [...Array(5)].map((_, i) => <SkeletonRow key={i} cols={6} />)
                     : allocations.length === 0
-                    ? (
-                      <tr><td colSpan={6}>
-                        <div className="empty-state">
-                          <div className="empty-state-icon"><Package size={22} /></div>
-                          <p className="empty-state-title">No allocations found</p>
-                          <p className="empty-state-desc">Allocations will appear here once assets are assigned.</p>
-                        </div>
-                      </td></tr>
-                    )
-                    : allocations.map(alloc => (
-                      <tr key={alloc._id}>
-                        <td>
-                          <div>
-                            <p style={{ fontWeight: 600, fontSize: '.875rem' }}>{alloc.asset?.name}</p>
-                            <p style={{ fontSize: '.73rem', color: 'hsl(var(--text-muted))', fontFamily: 'monospace', marginTop: 1 }}>{alloc.asset?.assetTag}</p>
+                      ? (
+                        <tr><td colSpan={6}>
+                          <div className="empty-state">
+                            <div className="empty-state-icon"><Package size={22} /></div>
+                            <p className="empty-state-title">No allocations found</p>
+                            <p className="empty-state-desc">Allocations will appear here once assets are assigned.</p>
                           </div>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, color: 'hsl(var(--primary))', flexShrink: 0 }}>
-                              {alloc.allocatedToUser?.name?.[0]?.toUpperCase() || '?'}
+                        </td></tr>
+                      )
+                      : allocations.map(alloc => (
+                        <tr key={alloc._id}>
+                          <td>
+                            <div>
+                              <p style={{ fontWeight: 600, fontSize: '.875rem' }}>{alloc.asset?.name || '—'}</p>
+                              <p style={{ fontSize: '.73rem', color: 'hsl(var(--text-muted))', fontFamily: 'monospace', marginTop: 1 }}>{alloc.asset?.assetTag || '—'}</p>
                             </div>
-                            <span style={{ fontSize: '.8125rem' }}>{alloc.allocatedToUser?.name}</span>
-                          </div>
-                        </td>
-                        <td style={{ fontSize: '.8125rem', color: 'hsl(var(--text-secondary))' }}>
-                          {new Date(alloc.allocatedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </td>
-                        <td style={{ fontSize: '.8125rem', color: 'hsl(var(--text-secondary))' }}>
-                          {alloc.expectedReturnDate ? new Date(alloc.expectedReturnDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                        </td>
-                        <td><span className={getBadgeClass(alloc.status)}>{alloc.status}</span></td>
-                        <td>
-                          {alloc.status === 'Active' && alloc.allocatedToUser?._id === user?._id && (
-                            <button onClick={() => handleReturn(alloc._id)} className="btn btn-outline btn-sm">
-                              <RotateCcw size={12} /> Return Asset
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, color: 'hsl(var(--primary))', flexShrink: 0 }}>
+                                {alloc.allocatedToUser?.name?.[0]?.toUpperCase() || '?'}
+                              </div>
+                              <span style={{ fontSize: '.8125rem' }}>{alloc.allocatedToUser?.name || '—'}</span>
+                            </div>
+                          </td>
+                          <td style={{ fontSize: '.8125rem', color: 'hsl(var(--text-secondary))' }}>
+                            {alloc.allocatedDate ? new Date(alloc.allocatedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                          </td>
+                          <td style={{ fontSize: '.8125rem', color: 'hsl(var(--text-secondary))' }}>
+                            {alloc.expectedReturnDate ? new Date(alloc.expectedReturnDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                          </td>
+                          <td><span className={getBadgeClass(alloc.status)}>{alloc.status}</span></td>
+                          <td>
+                            {alloc.status === 'Active' && alloc.allocatedToUser?._id === user?._id && (
+                              <button onClick={() => handleReturn(alloc._id)} className="btn btn-outline btn-sm">
+                                <RotateCcw size={12} /> Return Asset
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
                   }
                 </tbody>
               </>
@@ -245,49 +246,49 @@ export default function AllocationsPage() {
                   {isLoading
                     ? [...Array(4)].map((_, i) => <SkeletonRow key={i} cols={5} />)
                     : transfers.length === 0
-                    ? (
-                      <tr><td colSpan={5}>
-                        <div className="empty-state">
-                          <div className="empty-state-icon"><ArrowLeftRight size={22} /></div>
-                          <p className="empty-state-title">No transfer requests</p>
-                          <p className="empty-state-desc">Transfer requests will appear here once submitted.</p>
-                        </div>
-                      </td></tr>
-                    )
-                    : transfers.map(tr => (
-                      <tr key={tr._id}>
-                        <td>
-                          <div>
-                            <p style={{ fontWeight: 600, fontSize: '.875rem' }}>{tr.asset?.name}</p>
-                            <p style={{ fontSize: '.73rem', color: 'hsl(var(--text-muted))', fontFamily: 'monospace', marginTop: 1 }}>{tr.asset?.assetTag}</p>
+                      ? (
+                        <tr><td colSpan={5}>
+                          <div className="empty-state">
+                            <div className="empty-state-icon"><ArrowLeftRight size={22} /></div>
+                            <p className="empty-state-title">No transfer requests</p>
+                            <p className="empty-state-desc">Transfer requests will appear here once submitted.</p>
                           </div>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, color: 'hsl(var(--primary))', flexShrink: 0 }}>
-                              {tr.requestedBy?.name?.[0]?.toUpperCase() || '?'}
+                        </td></tr>
+                      )
+                      : transfers.map(tr => (
+                        <tr key={tr._id}>
+                          <td>
+                            <div>
+                              <p style={{ fontWeight: 600, fontSize: '.875rem' }}>{tr.asset?.name || '—'}</p>
+                              <p style={{ fontSize: '.73rem', color: 'hsl(var(--text-muted))', fontFamily: 'monospace', marginTop: 1 }}>{tr.asset?.assetTag || '—'}</p>
                             </div>
-                            <span style={{ fontSize: '.8125rem' }}>{tr.requestedBy?.name}</span>
-                          </div>
-                        </td>
-                        <td style={{ maxWidth: 220 }}>
-                          <p style={{ fontSize: '.8125rem', color: 'hsl(var(--text-secondary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{tr.reason}</p>
-                        </td>
-                        <td><span className={getBadgeClass(tr.status)}>{tr.status}</span></td>
-                        <td>
-                          {tr.status === 'Pending' && canManage && (
-                            <div style={{ display: 'flex', gap: '.4rem' }}>
-                              <button className="btn btn-primary btn-sm">
-                                <CheckCircle size={12} /> Approve
-                              </button>
-                              <button className="btn btn-outline btn-sm" style={{ color: 'hsl(var(--error))', borderColor: 'rgb(239,68,68/.3)' }}>
-                                <X size={12} /> Reject
-                              </button>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, color: 'hsl(var(--primary))', flexShrink: 0 }}>
+                                {tr.requestedBy?.name?.[0]?.toUpperCase() || '?'}
+                              </div>
+                              <span style={{ fontSize: '.8125rem' }}>{tr.requestedBy?.name || '—'}</span>
                             </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td style={{ maxWidth: 220 }}>
+                            <p style={{ fontSize: '.8125rem', color: 'hsl(var(--text-secondary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{tr.reason || '—'}</p>
+                          </td>
+                          <td><span className={getBadgeClass(tr.status)}>{tr.status || '—'}</span></td>
+                          <td>
+                            {tr.status === 'Pending' && canManage && (
+                              <div style={{ display: 'flex', gap: '.4rem' }}>
+                                <button className="btn btn-primary btn-sm">
+                                  <CheckCircle size={12} /> Approve
+                                </button>
+                                <button className="btn btn-outline btn-sm" style={{ color: 'hsl(var(--error))', borderColor: 'rgb(239,68,68/.3)' }}>
+                                  <X size={12} /> Reject
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
                   }
                 </tbody>
               </>
@@ -346,7 +347,7 @@ export default function AllocationsPage() {
       )}
 
       {/* Modals for Refactored Prompts/Confirms */}
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={transferConfirmOpen}
         title="Asset Already Allocated"
         message="This asset is currently allocated to someone else. Do you want to request a transfer instead?"
@@ -361,7 +362,7 @@ export default function AllocationsPage() {
         }}
       />
 
-      <PromptModal 
+      <PromptModal
         isOpen={transferPromptOpen}
         title="Request Transfer"
         message="Enter a reason for the transfer request:"
@@ -370,7 +371,7 @@ export default function AllocationsPage() {
         onCancel={() => { setTransferPromptOpen(false); setActiveAssetId(null); }}
       />
 
-      <PromptModal 
+      <PromptModal
         isOpen={returnPromptOpen}
         title="Return Asset"
         message="Enter the condition of the asset being returned (New, Good, Fair, Poor, Damaged):"
