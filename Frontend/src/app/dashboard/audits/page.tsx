@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
 import { Plus, FileCheck, ExternalLink, ChevronRight } from 'lucide-react';
+import PromptModal from '@/components/ui/PromptModal';
+import { toast } from 'react-toastify';
 
 function getBadgeClass(status: string) {
   if (status === 'Closed' || status === 'Completed') return 'badge badge-completed';
@@ -29,6 +31,7 @@ export default function AuditsPage() {
   const router = useRouter();
   const [audits, setAudits]       = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => { fetchAudits(); }, []);
 
@@ -40,8 +43,11 @@ export default function AuditsPage() {
     finally { setIsLoading(false); }
   };
 
-  const handleCreateAudit = async () => {
-    const title = prompt('Enter Audit Cycle Name:');
+  const handleCreateAudit = () => {
+    setCreateModalOpen(true);
+  };
+
+  const submitCreateAudit = async (title: string) => {
     if (!title) return;
     try {
       await api.post('/audit-cycles', {
@@ -50,8 +56,13 @@ export default function AuditsPage() {
         dateRangeEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         scopeType: 'all',
       });
+      toast.success('Audit Cycle Created!');
       fetchAudits();
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to create audit'); }
+    } catch (err: any) { 
+      toast.error(err.response?.data?.message || 'Failed to create audit'); 
+    } finally {
+      setCreateModalOpen(false);
+    }
   };
 
   const canManage = user?.role === 'admin' || user?.role === 'asset_manager';
@@ -150,6 +161,14 @@ export default function AuditsPage() {
           </table>
         </div>
       </div>
+      <PromptModal 
+        isOpen={createModalOpen}
+        title="Create Audit Cycle"
+        message="Enter a name for the new Audit Cycle:"
+        placeholder="e.g. Q3 IT Hardware Audit"
+        onConfirm={submitCreateAudit}
+        onCancel={() => setCreateModalOpen(false)}
+      />
     </div>
   );
 }

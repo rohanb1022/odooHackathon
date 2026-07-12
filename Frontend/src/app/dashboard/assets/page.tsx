@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Plus, Search, Filter, QrCode, ChevronDown, ChevronUp, Sparkles, Activity, AlertTriangle, Package, X } from 'lucide-react';
 import api from '@/lib/axios';
+import PromptModal from '@/components/ui/PromptModal';
 
 interface Asset {
   _id: string; name: string; assetTag: string; serialNumber: string;
@@ -162,6 +163,7 @@ export default function AssetsPage() {
   const [isLoading, setIsLoading]     = useState(true);
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [scanModalOpen, setScanModalOpen] = useState(false);
 
   // Row Expansion State
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -210,8 +212,12 @@ export default function AssetsPage() {
   };
 
   const handleScanQR = () => {
-    const scanned = prompt('📷 Simulate Scanner: Enter QR Code (Asset Tag or Serial)');
+    setScanModalOpen(true);
+  };
+
+  const handleScanSubmit = (scanned: string) => {
     if (scanned) setSearch(scanned);
+    setScanModalOpen(false);
   };
 
   const filteredAssets = assets.filter(asset => {
@@ -508,6 +514,15 @@ export default function AssetsPage() {
           </div>
         )}
       </div>
+
+      <PromptModal 
+        isOpen={scanModalOpen}
+        title="Simulate QR Scanner"
+        message="Enter the QR Code (Asset Tag or Serial Number) you want to scan:"
+        placeholder="e.g. AF-0001"
+        onConfirm={handleScanSubmit}
+        onCancel={() => setScanModalOpen(false)}
+      />
     </div>
   );
 }

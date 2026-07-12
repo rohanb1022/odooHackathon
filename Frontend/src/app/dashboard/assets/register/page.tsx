@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/axios';
+import { toast } from 'react-toastify';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 
 interface Category {
@@ -66,12 +67,12 @@ export default function RegisterAssetPage() {
       
       const { data } = await api.post('/assets', payload);
       if (data.success) {
-        alert('Asset registered successfully!');
+        toast.success('Asset registered successfully!');
         router.push('/dashboard/assets');
       }
     } catch (error: any) {
       console.error('Registration failed', error);
-      alert(error.response?.data?.message || 'Failed to register asset');
+      toast.error(error.response?.data?.message || 'Failed to register asset');
     } finally {
       setIsLoading(false);
     }

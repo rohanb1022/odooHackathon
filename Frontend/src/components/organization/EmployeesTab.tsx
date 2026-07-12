@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Shield } from 'lucide-react';
+import { toast } from 'react-toastify';
 import api from '@/lib/axios';
 
 interface User {
@@ -40,9 +41,10 @@ export default function EmployeesTab() {
       await api.patch(`/users/${userId}/promote`, { role: newRole });
       // Optimistically update
       setEmployees(employees.map(emp => emp._id === userId ? { ...emp, role: newRole } : emp));
+      toast.success('Role updated successfully');
     } catch (error) {
       console.error('Failed to update role', error);
-      alert('Failed to update role');
+      toast.error('Failed to update role');
     }
   };
 

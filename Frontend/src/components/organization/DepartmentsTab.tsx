@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X } from 'lucide-react';
+import { toast } from 'react-toastify';
 import api from '@/lib/axios';
 
 interface Department {
@@ -44,13 +45,14 @@ export default function DepartmentsTab() {
         description: newDeptDesc
       });
       if (data.success) {
+        toast.success('Department added successfully!');
         setIsModalOpen(false);
         setNewDeptName('');
         setNewDeptDesc('');
         fetchDepartments();
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to add department');
+      toast.error(error.response?.data?.message || 'Failed to add department');
     }
   };
 
