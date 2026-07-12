@@ -19,6 +19,7 @@ interface Action {
   startTime?: string;
   endTime?: string;
   priority?: string;
+  condition?: string;
 }
 
 // Custom simple markdown renderer for clean, professional styling
