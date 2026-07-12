@@ -1,15 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const { createTransferRequest, getAllTransferRequests, approveTransfer, rejectTransfer } = require('../controllers/transfer.controller');
+const {
+  createTransferRequest,
+  getAllTransferRequests,
+  getTransferRequestById,
+  approveTransferRequest,
+  rejectTransferRequest,
+} = require('../controllers/transfer.controller');
 const { verifyToken, isAdminOrManager } = require('../middlewares/auth.middleware');
+const {
+  createTransferValidator,
+  reviewTransferValidator,
+} = require('../validators/transfer.validator');
 
 router.use(verifyToken);
 
 router.route('/')
-  .post(createTransferRequest)
-  .get(isAdminOrManager, getAllTransferRequests);
+  .post(createTransferValidator, createTransferRequest)
+  .get(getAllTransferRequests);
 
-router.patch('/:id/approve', isAdminOrManager, approveTransfer);
-router.patch('/:id/reject', isAdminOrManager, rejectTransfer);
+router.route('/:id')
+  .get(getTransferRequestById);
+
+router.patch('/:id/approve', isAdminOrManager, reviewTransferValidator, approveTransferRequest);
+router.patch('/:id/reject', isAdminOrManager, reviewTransferValidator, rejectTransferRequest);
 
 module.exports = router;
