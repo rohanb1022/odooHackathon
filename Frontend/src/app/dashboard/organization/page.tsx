@@ -10,7 +10,7 @@ export default function OrganizationPage() {
   const [activeTab, setActiveTab] = useState<'departments' | 'categories' | 'employees'>('departments');
   const user = useAuthStore(state => state.user);
 
-  if (user?.role !== 'Admin') {
+  if (user?.role !== 'admin') {
     return (
       <div style={{ textAlign: 'center', marginTop: '4rem' }}>
         <h2 style={{ color: 'hsl(var(--error))', fontSize: '1.25rem' }}>Access Denied</h2>

@@ -154,7 +154,7 @@ export default function BookingsPage() {
                           </span>
                         </td>
                         <td style={{ padding: '1rem' }}>
-                          {(booking.status === 'Upcoming' || booking.status === 'Ongoing') && (booking.user?._id === user?._id || user?.role === 'Admin') && (
+                          {(booking.status === 'Upcoming' || booking.status === 'Ongoing') && (booking.user?._id === user?._id || user?.role === 'admin') && (
                             <button onClick={() => handleCancel(booking._id)} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: 'hsl(var(--error))', borderColor: 'hsla(var(--error), 0.3)' }}>
                               Cancel
                             </button>

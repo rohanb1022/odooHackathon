@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Package, Wrench, Calendar, Repeat } from 'lucide-react';
+import Link from 'next/link';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 
@@ -46,13 +47,13 @@ export default function DashboardPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Welcome back, {user?.name?.split(' ')[0] || ''}!</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Welcome back, {user?.name.split(' ')[0]}!</h1>
           <p style={{ color: 'hsl(var(--text-muted))', marginTop: '0.25rem' }}>Here's what's happening today.</p>
         </div>
-        
+
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <button className="btn btn-primary">Register Asset</button>
-          <button className="btn btn-outline">Book Resource</button>
+          <Link href="/dashboard/assets/register" className="btn btn-primary">Register Asset</Link>
+          <Link href="/dashboard/bookings" className="btn btn-outline">Book Resource</Link>
         </div>
       </div>
 
@@ -106,8 +107,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-      
-      <style dangerouslySetInnerHTML={{__html: `
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: .5; }

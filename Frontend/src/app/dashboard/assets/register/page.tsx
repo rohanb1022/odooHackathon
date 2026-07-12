@@ -21,9 +21,9 @@ export default function RegisterAssetPage() {
     serialNumber: '',
     acquisitionDate: '',
     acquisitionCost: '',
-    condition: 'New',
+    condition: 'Excellent',
     location: '',
-    isShared: false
+    isBookable: false
   });
 
   useEffect(() => {
@@ -48,10 +48,18 @@ export default function RegisterAssetPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const payload = {
-        ...formData,
-        acquisitionCost: Number(formData.acquisitionCost)
+      const payload: any = {
+        name: formData.name,
+        categoryId: formData.categoryId,
+        condition: formData.condition,
+        location: formData.location,
+        isBookable: formData.isBookable
       };
+      
+      if (formData.serialNumber) payload.serialNumber = formData.serialNumber;
+      if (formData.acquisitionDate) payload.acquisitionDate = formData.acquisitionDate;
+      if (formData.acquisitionCost) payload.acquisitionCost = Number(formData.acquisitionCost);
+
       
       const { data } = await api.post('/assets', payload);
       if (data.success) {
@@ -104,10 +112,11 @@ export default function RegisterAssetPage() {
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>Condition *</label>
             <select name="condition" value={formData.condition} onChange={handleChange} className="input-field" required>
-              <option value="New">New</option>
+              <option value="Excellent">Excellent</option>
               <option value="Good">Good</option>
               <option value="Fair">Fair</option>
               <option value="Poor">Poor</option>
+              <option value="Damaged">Damaged</option>
             </select>
           </div>
 
@@ -127,9 +136,9 @@ export default function RegisterAssetPage() {
           </div>
 
           <div style={{ gridColumn: '1 / -1', padding: '1rem', backgroundColor: 'hsla(var(--primary), 0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <input type="checkbox" id="isShared" name="isShared" checked={formData.isShared} onChange={handleChange} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+            <input type="checkbox" id="isBookable" name="isBookable" checked={formData.isBookable} onChange={handleChange} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
             <div>
-              <label htmlFor="isShared" style={{ fontWeight: 600, cursor: 'pointer' }}>Mark as Shared/Bookable Resource</label>
+              <label htmlFor="isBookable" style={{ fontWeight: 600, cursor: 'pointer' }}>Mark as Shared/Bookable Resource</label>
               <p style={{ fontSize: '0.875rem', color: 'hsl(var(--text-muted))', marginTop: '0.25rem' }}>Enable this if the asset (e.g. Conference Room, Projector) can be booked by employees for specific time slots.</p>
             </div>
           </div>

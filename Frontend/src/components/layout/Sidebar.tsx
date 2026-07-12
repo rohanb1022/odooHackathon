@@ -19,14 +19,14 @@ export default function Sidebar() {
   const user = useAuthStore((state) => state.user);
 
   const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['Admin', 'Asset Manager', 'Department Head', 'Employee'] },
-    { name: 'Assets', href: '/dashboard/assets', icon: Package, roles: ['Admin', 'Asset Manager', 'Department Head', 'Employee'] },
-    { name: 'Bookings', href: '/dashboard/bookings', icon: Calendar, roles: ['Admin', 'Asset Manager', 'Department Head', 'Employee'] },
-    { name: 'Maintenance', href: '/dashboard/maintenance', icon: Wrench, roles: ['Admin', 'Asset Manager', 'Department Head', 'Employee'] },
-    { name: 'Audits', href: '/dashboard/audits', icon: FileCheck, roles: ['Admin', 'Asset Manager', 'Department Head'] },
-    { name: 'Reports', href: '/dashboard/reports', icon: BarChart3, roles: ['Admin', 'Asset Manager', 'Department Head'] },
-    { name: 'Organization', href: '/dashboard/organization', icon: Users, roles: ['Admin'] },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['Admin', 'Asset Manager', 'Department Head', 'Employee'] },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
+    { name: 'Assets', href: '/dashboard/assets', icon: Package, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
+    { name: 'Bookings', href: '/dashboard/bookings', icon: Calendar, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
+    { name: 'Maintenance', href: '/dashboard/maintenance', icon: Wrench, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
+    { name: 'Audits', href: '/dashboard/audits', icon: FileCheck, roles: ['admin', 'asset_manager', 'department_head'] },
+    { name: 'Reports', href: '/dashboard/reports', icon: BarChart3, roles: ['admin', 'asset_manager', 'department_head'] },
+    { name: 'Organization', href: '/dashboard/organization', icon: Users, roles: ['admin'] },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['admin', 'asset_manager', 'department_head', 'employee'] },
   ];
 
   const filteredNavItems = navItems.filter(item => 
