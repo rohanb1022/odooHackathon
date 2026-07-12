@@ -16,16 +16,24 @@ api.interceptors.response.use(
       const { success, message, ...rest } = response.data;
       const keys = Object.keys(rest);
       
-      // If there's an obvious array (e.g. 'users', 'assets', 'departments')
-      const arrayKey = keys.find(k => Array.isArray(rest[k]));
-      if (arrayKey) {
-        response.data.data = rest[arrayKey];
-      } else if (keys.length === 1) {
-        // Single object like 'user'
-        response.data.data = rest[keys[0]];
-      } else {
-        // Multiple keys, like dashboard stats
+      const isComplexPayload = response.config.url?.includes('/dashboard') || 
+                               response.config.url?.includes('/reports') ||
+                               response.config.url?.includes('/audit-cycles');
+
+      if (isComplexPayload) {
+        // Return full object for dashboard, reports, and audit details endpoints
         response.data.data = rest;
+      } else {
+        // Automatically map backend responses to a standard { data } envelope
+        // so frontend components using `data.data` continue to work.
+        const arrayKey = keys.find(k => Array.isArray(rest[k]));
+        if (arrayKey) {
+          response.data.data = rest[arrayKey];
+        } else if (keys.length === 1) {
+          response.data.data = rest[keys[0]];
+        } else {
+          response.data.data = rest;
+        }
       }
     }
     return response;

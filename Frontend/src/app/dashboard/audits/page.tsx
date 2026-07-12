@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
 import { Plus } from 'lucide-react';
 
 export default function AuditsPage() {
   const user = useAuthStore(state => state.user);
+  const router = useRouter();
   const [audits, setAudits] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -17,7 +19,7 @@ export default function AuditsPage() {
   const fetchAudits = async () => {
     try {
       const { data } = await api.get('/audit-cycles');
-      setAudits(data.data);
+      setAudits(data.data.auditCycles || []);
     } catch (error) {
       console.error('Failed to fetch audits', error);
     } finally {
@@ -26,14 +28,14 @@ export default function AuditsPage() {
   };
 
   const handleCreateAudit = async () => {
-    const name = prompt('Enter Audit Cycle Name:');
-    if (!name) return;
+    const title = prompt('Enter Audit Cycle Name:');
+    if (!title) return;
     try {
       await api.post('/audit-cycles', {
-        name,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week
-        scope: { all: true }
+        title,
+        dateRangeStart: new Date().toISOString(),
+        dateRangeEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week
+        scopeType: 'all'
       });
       alert('Audit cycle created');
       fetchAudits();
@@ -83,9 +85,9 @@ export default function AuditsPage() {
                 ) : (
                   audits.map(audit => (
                     <tr key={audit._id} style={{ borderBottom: '1px solid hsl(var(--border))' }}>
-                      <td style={{ padding: '1rem', fontWeight: 500 }}>{audit.name}</td>
-                      <td style={{ padding: '1rem' }}>{new Date(audit.startDate).toLocaleDateString()}</td>
-                      <td style={{ padding: '1rem' }}>{new Date(audit.endDate).toLocaleDateString()}</td>
+                      <td style={{ padding: '1rem', fontWeight: 500 }}>{audit.title}</td>
+                      <td style={{ padding: '1rem' }}>{new Date(audit.dateRangeStart).toLocaleDateString()}</td>
+                      <td style={{ padding: '1rem' }}>{new Date(audit.dateRangeEnd).toLocaleDateString()}</td>
                       <td style={{ padding: '1rem' }}>
                         <span style={{ 
                           padding: '0.25rem 0.6rem', 
@@ -100,7 +102,13 @@ export default function AuditsPage() {
                       </td>
                       <td style={{ padding: '1rem' }}>{audit.assignedAuditors?.length || 0}</td>
                       <td style={{ padding: '1rem' }}>
-                        <button className="btn btn-outline" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}>View Details</button>
+                        <button 
+                          className="btn btn-outline" 
+                          style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
+                          onClick={() => router.push(`/dashboard/audits/${audit._id}`)}
+                        >
+                          View Details
+                        </button>
                       </td>
                     </tr>
                   ))

@@ -15,7 +15,7 @@ export default function ReportsPage() {
       setIsLoading(true);
       try {
         if (activeTab === 'analytics') {
-          const { data } = await api.get('/reports/summary');
+          const { data } = await api.get('/reports/assets');
           setReports(data.data);
         } else {
           const { data } = await api.get('/activity-logs');
@@ -71,10 +71,31 @@ export default function ReportsPage() {
           {isLoading ? (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'hsl(var(--text-muted))' }}>Loading...</div>
           ) : activeTab === 'analytics' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-              <div style={{ border: '1px solid hsl(var(--border))', borderRadius: '8px', padding: '1.5rem' }}>
-                <h3 style={{ fontWeight: 600, marginBottom: '1rem' }}>Asset Status Distribution</h3>
-                {reports?.statusDistribution ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {/* Financial Summary */}
+                <div style={{ border: '1px solid hsl(var(--border))', borderRadius: '8px', padding: '1.5rem', backgroundColor: 'hsla(var(--primary), 0.05)', gridColumn: '1 / -1' }}>
+                  <h3 style={{ fontWeight: 600, marginBottom: '1rem' }}>Financial Overview</h3>
+                  {reports?.summary ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                      <div>
+                        <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.875rem' }}>Total Purchase Cost</p>
+                        <h4 style={{ fontSize: '1.5rem', fontWeight: 600 }}>${reports.summary.totalPurchaseCost?.toLocaleString()}</h4>
+                      </div>
+                      <div>
+                        <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.875rem' }}>Est. Depreciation</p>
+                        <h4 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'hsl(var(--warning))' }}>${reports.summary.totalEstimatedDepreciation?.toLocaleString()}</h4>
+                      </div>
+                      <div>
+                        <p style={{ color: 'hsl(var(--text-muted))', fontSize: '0.875rem' }}>Current Valuation</p>
+                        <h4 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'hsl(var(--success))' }}>${reports.summary.totalCurrentValuation?.toLocaleString()}</h4>
+                      </div>
+                    </div>
+                  ) : <p>No data available</p>}
+                </div>
+
+                <div style={{ border: '1px solid hsl(var(--border))', borderRadius: '8px', padding: '1.5rem' }}>
+                  <h3 style={{ fontWeight: 600, marginBottom: '1rem' }}>Asset Status Distribution</h3>
+                  {reports?.statusDistribution ? (
                   <ul style={{ listStyle: 'none' }}>
                     {reports.statusDistribution.map((stat: any) => (
                       <li key={stat._id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -90,8 +111,8 @@ export default function ReportsPage() {
                 {reports?.categoryDistribution ? (
                   <ul style={{ listStyle: 'none' }}>
                     {reports.categoryDistribution.map((stat: any) => (
-                      <li key={stat._id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ color: 'hsl(var(--text-muted))' }}>{stat._id}</span>
+                      <li key={stat.categoryName} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <span style={{ color: 'hsl(var(--text-muted))' }}>{stat.categoryName}</span>
                         <span style={{ fontWeight: 600 }}>{stat.count}</span>
                       </li>
                     ))}
@@ -99,8 +120,13 @@ export default function ReportsPage() {
                 ) : <p>No data available</p>}
               </div>
               <div style={{ border: '1px solid hsl(var(--border))', borderRadius: '8px', padding: '1.5rem', gridColumn: '1 / -1' }}>
-                 <h3 style={{ fontWeight: 600, marginBottom: '1rem' }}>Recent Maintenance</h3>
-                 <p style={{ color: 'hsl(var(--text-muted))' }}>Detailed metrics will be populated here.</p>
+                 <h3 style={{ fontWeight: 600, marginBottom: '1rem' }}>Attention Needed</h3>
+                 {reports?.nearingRetirementAssets?.length > 0 || reports?.dueForMaintenanceAssets?.length > 0 ? (
+                   <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                     {reports.nearingRetirementAssets?.map((a: any) => <li key={a._id} style={{ color: 'hsl(var(--warning))' }}>⚠️ {a.name} is nearing retirement.</li>)}
+                     {reports.dueForMaintenanceAssets?.map((a: any) => <li key={a._id} style={{ color: 'hsl(var(--error))' }}>🔧 {a.name} is due for maintenance.</li>)}
+                   </ul>
+                 ) : <p style={{ color: 'hsl(var(--text-muted))' }}>No assets require immediate attention.</p>}
               </div>
             </div>
           ) : (
@@ -120,9 +146,9 @@ export default function ReportsPage() {
                   ) : (
                     logs.map(log => (
                       <tr key={log._id} style={{ borderBottom: '1px solid hsl(var(--border))' }}>
-                        <td style={{ padding: '1rem', fontWeight: 500, color: 'hsl(var(--primary))' }}>{log.actionType}</td>
-                        <td style={{ padding: '1rem' }}>{log.user?.name || 'System'}</td>
-                        <td style={{ padding: '1rem' }}>{log.entityType} ({log.entityId})</td>
+                        <td style={{ padding: '1rem', fontWeight: 500, color: 'hsl(var(--primary))' }}>{log.action}</td>
+                        <td style={{ padding: '1rem' }}>{log.actorId?.name || log.actorId?.firstName || 'System'}</td>
+                        <td style={{ padding: '1rem' }}>{log.targetModel} {log.meta?.name || log.meta?.title ? `(${log.meta.name || log.meta.title})` : ''}</td>
                         <td style={{ padding: '1rem' }}>{new Date(log.createdAt).toLocaleString()}</td>
                       </tr>
                     ))

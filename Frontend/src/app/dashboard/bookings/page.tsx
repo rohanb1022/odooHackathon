@@ -45,10 +45,10 @@ export default function BookingsPage() {
     e.preventDefault();
     try {
       await api.post('/bookings', {
-        resource: bookingForm.resourceId,
+        resourceId: bookingForm.resourceId,
         startTime: new Date(bookingForm.startTime).toISOString(),
         endTime: new Date(bookingForm.endTime).toISOString(),
-        purpose: bookingForm.purpose
+        title: bookingForm.purpose
       });
       alert('Resource booked successfully!');
       setShowModal(false);
@@ -122,8 +122,8 @@ export default function BookingsPage() {
                     const endDate = new Date(booking.endTime);
                     return (
                       <tr key={booking._id} style={{ borderBottom: '1px solid hsl(var(--border))' }}>
-                        <td style={{ padding: '1rem', fontWeight: 500 }}>{booking.resource?.name}</td>
-                        <td style={{ padding: '1rem' }}>{booking.user?.name}</td>
+                        <td style={{ padding: '1rem', fontWeight: 500 }}>{booking.resourceId?.name}</td>
+                        <td style={{ padding: '1rem' }}>{booking.bookedBy?.name}</td>
                         <td style={{ padding: '1rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <CalendarIcon size={14} style={{ color: 'hsl(var(--text-muted))' }} />
@@ -134,12 +134,14 @@ export default function BookingsPage() {
                         </td>
                         <td style={{ padding: '1rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Clock size={14} style={{ color: 'hsl(var(--text-muted))' }} />
+                            <CalendarIcon size={14} style={{ color: 'hsl(var(--text-muted))' }} />
+                            {endDate.toLocaleDateString()}
+                            <Clock size={14} style={{ marginLeft: '0.5rem', color: 'hsl(var(--text-muted))' }} />
                             {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </td>
                         <td style={{ padding: '1rem', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {booking.purpose}
+                          {booking.title}
                         </td>
                         <td style={{ padding: '1rem' }}>
                           <span style={{ 

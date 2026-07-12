@@ -48,8 +48,8 @@ export default function MaintenancePage() {
     e.preventDefault();
     try {
       await api.post('/maintenance', {
-        asset: requestForm.assetId,
-        issueDescription: requestForm.issueDescription,
+        assetId: requestForm.assetId,
+        description: requestForm.issueDescription,
         priority: requestForm.priority
       });
       alert('Maintenance request submitted successfully!');
@@ -62,7 +62,15 @@ export default function MaintenancePage() {
 
   const updateStatus = async (id: string, newStatus: string) => {
     try {
-      await api.patch(`/maintenance/${id}/status`, { status: newStatus });
+      if (newStatus === 'Approved') {
+        await api.patch(`/maintenance/${id}/approve`, {});
+      } else if (newStatus === 'Rejected') {
+        const reason = prompt("Enter rejection reason:");
+        if (!reason) return;
+        await api.patch(`/maintenance/${id}/reject`, { rejectionReason: reason });
+      } else if (newStatus === 'Resolved') {
+        await api.patch(`/maintenance/${id}/resolve`, {});
+      }
       fetchRequests();
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to update status');
@@ -119,9 +127,9 @@ export default function MaintenancePage() {
                 ) : (
                   requests.map(req => (
                     <tr key={req._id} style={{ borderBottom: '1px solid hsl(var(--border))' }}>
-                      <td style={{ padding: '1rem', fontWeight: 500 }}>{req.asset?.name} ({req.asset?.assetTag})</td>
-                      <td style={{ padding: '1rem', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.issueDescription}</td>
-                      <td style={{ padding: '1rem' }}>{req.reportedBy?.name}</td>
+                      <td style={{ padding: '1rem', fontWeight: 500 }}>{req.assetId?.name} ({req.assetId?.assetTag})</td>
+                      <td style={{ padding: '1rem', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.description}</td>
+                      <td style={{ padding: '1rem' }}>{req.raisedBy?.name}</td>
                       <td style={{ padding: '1rem' }}>
                         <span style={{ 
                           padding: '0.25rem 0.5rem', 

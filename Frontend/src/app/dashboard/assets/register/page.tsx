@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import api from '@/lib/axios';
+import LocationAutocomplete from '@/components/LocationAutocomplete';
 
 interface Category {
   _id: string;
@@ -25,6 +26,7 @@ export default function RegisterAssetPage() {
     location: '',
     isBookable: false
   });
+  const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -53,7 +55,8 @@ export default function RegisterAssetPage() {
         categoryId: formData.categoryId,
         condition: formData.condition,
         location: formData.location,
-        isBookable: formData.isBookable
+        isBookable: formData.isBookable,
+        customFieldValues: coordinates ? { lat: coordinates.lat, lng: coordinates.lng } : {}
       };
       
       if (formData.serialNumber) payload.serialNumber = formData.serialNumber;
@@ -122,7 +125,12 @@ export default function RegisterAssetPage() {
 
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem' }}>Location *</label>
-            <input type="text" name="location" value={formData.location} onChange={handleChange} className="input-field" required placeholder="e.g. IT Dept Room 2" />
+            <LocationAutocomplete 
+              onLocationSelect={(loc) => {
+                setFormData(prev => ({ ...prev, location: loc.name }));
+                setCoordinates({ lat: loc.lat, lng: loc.lng });
+              }} 
+            />
           </div>
 
           <div>

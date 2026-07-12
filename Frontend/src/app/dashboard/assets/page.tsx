@@ -10,7 +10,7 @@ interface Asset {
   name: string;
   assetTag: string;
   serialNumber: string;
-  category: { _id: string; name: string };
+  categoryId: { _id: string; name: string };
   status: string;
   condition: string;
   location: string;
@@ -40,10 +40,20 @@ export default function AssetsPage() {
     }
   };
 
+  const handleScanQR = () => {
+    // Simulate a hardware QR code scan. In production, use a camera library.
+    const scanned = prompt('📷 Simulate Scanner: Enter QR Code (Asset Tag or Serial)');
+    if (scanned) {
+      setSearch(scanned);
+    }
+  };
+
   const filteredAssets = assets.filter(asset => {
-    const matchesSearch = asset.name.toLowerCase().includes(search.toLowerCase()) || 
-                          asset.assetTag.toLowerCase().includes(search.toLowerCase()) ||
-                          asset.serialNumber?.toLowerCase().includes(search.toLowerCase());
+    const searchLower = search.toLowerCase();
+    const matchesSearch = 
+      (asset.name?.toLowerCase().includes(searchLower)) || 
+      (asset.assetTag?.toLowerCase().includes(searchLower)) ||
+      (asset.serialNumber?.toLowerCase().includes(searchLower));
     const matchesStatus = statusFilter ? asset.status === statusFilter : true;
     return matchesSearch && matchesStatus;
   });
@@ -98,10 +108,12 @@ export default function AssetsPage() {
               <option value="Allocated">Allocated</option>
               <option value="Reserved">Reserved</option>
               <option value="Under Maintenance">Under Maintenance</option>
+              <option value="Lost">Lost</option>
               <option value="Retired">Retired</option>
+              <option value="Disposed">Disposed</option>
             </select>
           </div>
-          <button className="btn btn-outline" style={{ gap: '0.5rem' }}>
+          <button className="btn btn-outline" onClick={handleScanQR} style={{ gap: '0.5rem' }}>
             <QrCode size={18} /> Scan QR
           </button>
         </div>
@@ -136,7 +148,7 @@ export default function AssetsPage() {
                     <tr key={asset._id} style={{ borderBottom: '1px solid hsl(var(--border))', transition: 'background-color var(--transition-fast)' }} className="hover:bg-hsla-surface">
                       <td style={{ padding: '1rem', fontWeight: 600, color: 'hsl(var(--primary))' }}>{asset.assetTag}</td>
                       <td style={{ padding: '1rem', fontWeight: 500 }}>{asset.name}</td>
-                      <td style={{ padding: '1rem' }}>{asset.category?.name || '-'}</td>
+                      <td style={{ padding: '1rem' }}>{asset.categoryId?.name || '-'}</td>
                       <td style={{ padding: '1rem' }}>{asset.location}</td>
                       <td style={{ padding: '1rem' }}>
                         <span style={{ 
