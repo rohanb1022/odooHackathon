@@ -86,6 +86,29 @@ const assetSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // ── Hardware / Product Info ─────────────────────────────────────────────
+    manufacturer: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Manufacturer cannot exceed 100 characters'],
+      default: null,
+    },
+    modelNumber: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Model number cannot exceed 100 characters'],
+      default: null,
+    },
+    warrantyExpiry: {
+      type: Date,
+      default: null,
+    },
+    // Current assignee (mirrors active Allocation — kept in sync for fast lookup)
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     isDeleted: {
       type: Boolean,
       default: false,
