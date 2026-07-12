@@ -286,11 +286,11 @@ export default function DashboardPage() {
                 {/* Multi-color Distribution Bar */}
                 <div style={{ marginTop: '24px' }}>
                   <div style={{ display: 'flex', height: '14px', borderRadius: '9999px', overflow: 'hidden', gap: '3px' }}>
-                    <div style={{ width: '30%', backgroundColor: '#6d28d9', title: 'Savings (30%)' }} />
-                    <div style={{ width: '16%', backgroundColor: '#10b981', title: 'Income (16%)' }} />
-                    <div style={{ width: '12%', backgroundColor: '#ef4444', title: 'Properties (12%)' }} />
-                    <div style={{ width: '20%', backgroundColor: '#f59e0b', title: 'Investment (20%)' }} />
-                    <div style={{ width: '22%', backgroundColor: '#3b82f6', title: 'Loan / Reserve (22%)' }} />
+                    <div title="Savings (30%)" style={{ width: '30%', backgroundColor: '#6d28d9' }} />
+                    <div title="Income (16%)" style={{ width: '16%', backgroundColor: '#10b981' }} />
+                    <div title="Properties (12%)" style={{ width: '12%', backgroundColor: '#ef4444' }} />
+                    <div title="Investment (20%)" style={{ width: '20%', backgroundColor: '#f59e0b' }} />
+                    <div title="Loan / Reserve (22%)" style={{ width: '22%', backgroundColor: '#3b82f6' }} />
                   </div>
 
                   {/* Legend breakdown below bar */}
