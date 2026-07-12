@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import PromptModal from '@/components/ui/PromptModal';
+import { toast } from 'react-toastify';
 import { Repeat, ArrowLeftRight, Package, Plus, CheckCircle, X, RotateCcw } from 'lucide-react';
 
 function getBadgeClass(status: string) {
@@ -36,6 +39,12 @@ export default function AllocationsPage() {
   const [showAllocateModal, setShowAllocateModal] = useState(false);
   const [assets, setAssets]       = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  
+  // Modals state
+  const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
+  const [transferPromptOpen, setTransferPromptOpen] = useState(false);
+  const [returnPromptOpen, setReturnPromptOpen] = useState(false);
+  const [activeAssetId, setActiveAssetId] = useState<string | null>(null);
   const [allocateForm, setAllocateForm] = useState({ assetId: '', allocatedToUser: '', expectedReturnDate: '', notes: '' });
 
   const canManage = user?.role === 'admin' || user?.role === 'asset_manager';
@@ -63,46 +72,59 @@ export default function AllocationsPage() {
     e.preventDefault();
     try {
       await api.post('/allocations', allocateForm);
-      alert('Asset allocated successfully!');
+      toast.success('Asset allocated successfully!');
       setShowAllocateModal(false);
       setAllocateForm({ assetId: '', allocatedToUser: '', expectedReturnDate: '', notes: '' });
       fetchData();
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to allocate';
-      if (err.response?.status === 400 && msg.includes('already allocated')) {
-        if (confirm(`${msg}. Do you want to request a transfer instead?`)) {
-          handleTransferRequest(allocateForm.assetId);
-        }
-      } else { alert(msg); }
+    } catch (err: any) { 
+      const msg = err.response?.data?.message || 'Failed to allocate asset';
+      if (msg.includes('already allocated')) {
+        setActiveAssetId(allocateForm.assetId);
+        setTransferConfirmOpen(true);
+        setShowAllocateModal(false);
+      } else { 
+        toast.error(msg); 
+      }
     }
   };
 
-  const handleTransferRequest = async (assetId: string) => {
-    const reason = prompt('Enter reason for transfer request:');
-    if (!reason) return;
-    try {
-      await api.post('/transfer-requests', { asset: assetId, reason });
-      alert('Transfer requested successfully!');
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to request transfer'); }
+  const handleRequestTransfer = (id: string) => {
+    setActiveAssetId(id);
+    setTransferPromptOpen(true);
   };
 
-  const handleReturn = async (allocationId: string) => {
-    const condition = prompt('Enter return condition (New, Good, Fair, Poor, Damaged):', 'Good');
-    if (!condition) return;
+  const submitTransfer = async (reason: string) => {
+    if (!reason || !activeAssetId) return;
     try {
-      await api.post(`/allocations/${allocationId}/return`, { returnCondition: condition });
-      alert('Asset returned successfully!');
+      await api.post(`/allocations/${activeAssetId}/transfer`, { reason });
+      toast.success('Transfer requested successfully!');
       fetchData();
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to return asset'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to request transfer'); }
+    finally { setTransferPromptOpen(false); setActiveAssetId(null); }
+  };
+
+  const handleReturn = (id: string) => {
+    setActiveAssetId(id);
+    setReturnPromptOpen(true);
+  };
+
+  const submitReturn = async (condition: string) => {
+    if (!condition || !activeAssetId) return;
+    try {
+      await api.post(`/allocations/${activeAssetId}/return`, { condition });
+      toast.success('Asset returned successfully!');
+      fetchData();
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to return asset'); }
+    finally { setReturnPromptOpen(false); setActiveAssetId(null); }
   };
 
   const loadAllocateData = async () => {
     try {
-      const [assetRes, empRes] = await Promise.all([api.get('/assets?status=Available'), api.get('/users')]);
-      setAssets(assetRes.data.data);
-      setEmployees(empRes.data.data);
+      const [aRes, eRes] = await Promise.all([api.get('/assets'), api.get('/users')]);
+      setAssets(aRes.data.data);
+      setEmployees(eRes.data.data);
       setShowAllocateModal(true);
-    } catch { alert('Failed to load assets/employees'); }
+    } catch { toast.error('Failed to load assets/employees'); }
   };
 
   const tabs = [
@@ -322,6 +344,41 @@ export default function AllocationsPage() {
           </div>
         </div>
       )}
+
+      {/* Modals for Refactored Prompts/Confirms */}
+      <ConfirmModal 
+        isOpen={transferConfirmOpen}
+        title="Asset Already Allocated"
+        message="This asset is currently allocated to someone else. Do you want to request a transfer instead?"
+        confirmText="Request Transfer"
+        onConfirm={() => {
+          setTransferConfirmOpen(false);
+          setTransferPromptOpen(true);
+        }}
+        onCancel={() => {
+          setTransferConfirmOpen(false);
+          setActiveAssetId(null);
+        }}
+      />
+
+      <PromptModal 
+        isOpen={transferPromptOpen}
+        title="Request Transfer"
+        message="Enter a reason for the transfer request:"
+        placeholder="e.g. Needed for new project..."
+        onConfirm={submitTransfer}
+        onCancel={() => { setTransferPromptOpen(false); setActiveAssetId(null); }}
+      />
+
+      <PromptModal 
+        isOpen={returnPromptOpen}
+        title="Return Asset"
+        message="Enter the condition of the asset being returned (New, Good, Fair, Poor, Damaged):"
+        placeholder="e.g. Good"
+        defaultValue="Good"
+        onConfirm={submitReturn}
+        onCancel={() => { setReturnPromptOpen(false); setActiveAssetId(null); }}
+      />
     </div>
   );
 }

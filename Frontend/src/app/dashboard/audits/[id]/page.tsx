@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { toast } from 'react-toastify';
 import { ArrowLeft, CheckCircle, AlertTriangle, ShieldCheck, UserPlus, XCircle, FileCheck } from 'lucide-react';
 
 export default function AuditDetailsPage() {
@@ -18,6 +20,7 @@ export default function AuditDetailsPage() {
   const [selectedAuditor, setSelectedAuditor] = useState('');
   const [assets, setAssets]           = useState<any[]>([]);
   const [verifyForm, setVerifyForm]   = useState({ assetId: '', result: 'Verified', notes: '' });
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
   useEffect(() => {
     fetchAuditDetails();
@@ -30,7 +33,7 @@ export default function AuditDetailsPage() {
       const { data } = await api.get(`/audit-cycles/${id}`);
       setAudit(data.data.auditCycle);
       setRecords(data.data.records || []);
-    } catch { alert('Failed to load audit details'); }
+    } catch { toast.error('Failed to load audit details'); }
     finally { setIsLoading(false); }
   };
 
@@ -53,11 +56,12 @@ export default function AuditDetailsPage() {
     if (!selectedAuditor) return;
     try {
       const currentIds = audit.auditorIds.map((a: any) => a._id);
-      if (currentIds.includes(selectedAuditor)) return alert('User is already assigned.');
+      if (currentIds.includes(selectedAuditor)) return toast.error('User is already assigned.');
       await api.post(`/audit-cycles/${id}/assign`, { auditorIds: [...currentIds, selectedAuditor] });
       setSelectedAuditor('');
       fetchAuditDetails();
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to assign auditor'); }
+      toast.success('Auditor assigned!');
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to assign auditor'); }
   };
 
   const handleVerifyAsset = async (e: React.FormEvent) => {
@@ -66,15 +70,21 @@ export default function AuditDetailsPage() {
       await api.post(`/audit-cycles/${id}/verify`, verifyForm);
       setVerifyForm({ assetId: '', result: 'Verified', notes: '' });
       fetchAuditDetails();
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to verify asset'); }
+      toast.success('Asset verified');
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to verify asset'); }
   };
 
-  const handleCloseAudit = async () => {
-    if (!confirm('Close this audit cycle? This action cannot be undone.')) return;
+  const handleCloseCycle = () => {
+    setCloseConfirmOpen(true);
+  };
+
+  const submitCloseCycle = async () => {
     try {
       await api.post(`/audit-cycles/${id}/close`);
+      toast.success('Audit cycle closed');
       fetchAuditDetails();
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to close audit cycle'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to close audit cycle'); }
+    finally { setCloseConfirmOpen(false); }
   };
 
   if (isLoading) return (
@@ -129,7 +139,7 @@ export default function AuditDetailsPage() {
           </p>
         </div>
         {isAdminOrManager && audit.status !== 'Closed' && (
-          <button className="btn btn-danger" onClick={handleCloseAudit}>
+          <button className="btn btn-danger" onClick={handleCloseCycle}>
             Close Audit Cycle
           </button>
         )}
@@ -268,6 +278,15 @@ export default function AuditDetailsPage() {
           }
         </div>
       </div>
+      <ConfirmModal 
+        isOpen={closeConfirmOpen}
+        title="Close Audit Cycle"
+        message="Are you sure you want to close this audit cycle? This action cannot be undone."
+        confirmText="Close Audit"
+        isDanger={true}
+        onConfirm={submitCloseCycle}
+        onCancel={() => setCloseConfirmOpen(false)}
+      />
     </div>
   );
 }

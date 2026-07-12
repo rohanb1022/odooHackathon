@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Wrench, CheckCircle, XCircle, Clock, AlertTriangle, X } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
+import PromptModal from '@/components/ui/PromptModal';
+import { toast } from 'react-toastify';
 
 function getBadgeClass(status: string) {
   const m: Record<string, string> = {
@@ -43,6 +45,8 @@ export default function MaintenancePage() {
   const user = useAuthStore(s => s.user);
   const [requests, setRequests]   = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [requestToReject, setRequestToReject] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [assets, setAssets]       = useState<any[]>([]);
   const [form, setForm]           = useState({ assetId: '', issueDescription: '', priority: 'Medium' });
@@ -65,33 +69,49 @@ export default function MaintenancePage() {
       const { data } = await api.get('/assets');
       setAssets(data.data);
       setShowModal(true);
-    } catch { alert('Failed to load assets'); }
+    } catch { toast.error('Failed to load assets'); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await api.post('/maintenance', { assetId: form.assetId, description: form.issueDescription, priority: form.priority });
-      alert('Maintenance request submitted successfully!');
+      toast.success('Maintenance request submitted successfully!');
       setShowModal(false);
       setForm({ assetId: '', issueDescription: '', priority: 'Medium' });
       fetchRequests();
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to submit request'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to submit request'); }
   };
 
   const updateStatus = async (id: string, newStatus: string) => {
     try {
       if (newStatus === 'Approved') {
         await api.patch(`/maintenance/${id}/approve`, {});
+        toast.success('Maintenance approved');
       } else if (newStatus === 'Rejected') {
-        const reason = prompt('Enter rejection reason:');
-        if (!reason) return;
-        await api.patch(`/maintenance/${id}/reject`, { rejectionReason: reason });
+        setRequestToReject(id);
+        setRejectModalOpen(true);
+        return;
       } else if (newStatus === 'Resolved') {
         await api.patch(`/maintenance/${id}/resolve`, {});
+        toast.success('Maintenance resolved');
       }
       fetchRequests();
-    } catch (err: any) { alert(err.response?.data?.message || 'Failed to update status'); }
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to update status'); }
+  };
+
+  const handleRejectSubmit = async (reason: string) => {
+    if (!reason || !requestToReject) return;
+    try {
+      await api.patch(`/maintenance/${requestToReject}/reject`, { rejectionReason: reason });
+      toast.success('Maintenance request rejected');
+      fetchRequests();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to reject');
+    } finally {
+      setRejectModalOpen(false);
+      setRequestToReject(null);
+    }
   };
 
   const canManage = user?.role === 'admin' || user?.role === 'asset_manager';
@@ -259,6 +279,18 @@ export default function MaintenancePage() {
           </div>
         </div>
       )}
+
+      <PromptModal 
+        isOpen={rejectModalOpen}
+        title="Reject Maintenance Request"
+        message="Please provide a reason for rejecting this maintenance request:"
+        placeholder="Rejection reason..."
+        onConfirm={handleRejectSubmit}
+        onCancel={() => {
+          setRejectModalOpen(false);
+          setRequestToReject(null);
+        }}
+      />
     </div>
   );
 }
