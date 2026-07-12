@@ -117,8 +117,6 @@ exports.registerAsset = asyncHandler(async (req, res) => {
  * @query category, status, location, departmentId, assetTag, isBookable, search, page, limit
  */
 
-
-// This is for 
 exports.getAllAssets = asyncHandler(async (req, res) => {
   const {
     category, status, location, departmentId, assetTag,
