@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Plus, Search, Filter, QrCode, ChevronDown, ChevronUp, Sparkles, Activity, AlertTriangle, Package, X } from 'lucide-react';
 import api from '@/lib/axios';
 import PromptModal from '@/components/ui/PromptModal';
+import Pagination from '@/components/ui/Pagination';
 
 interface Asset {
   _id: string; name: string; assetTag: string; serialNumber: string;
@@ -164,6 +165,8 @@ export default function AssetsPage() {
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Row Expansion State
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -173,6 +176,10 @@ export default function AssetsPage() {
   useEffect(() => {
     fetchAssets();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset page on filter change
+  }, [search, statusFilter]);
 
   const fetchAssets = async () => {
     try {
@@ -229,6 +236,9 @@ export default function AssetsPage() {
     const matchesStatus = statusFilter ? asset.status === statusFilter : true;
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
+  const paginatedAssets = filteredAssets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -115,7 +115,7 @@ export default function ReportsPage() {
                               cx="50%"
                               cy="50%"
                               outerRadius={80}
-                              label={({ _id, percent }) => `${_id} ${(percent * 100).toFixed(0)}%`}
+                              label={(props: any) => `${props._id || props.name} ${((props.percent || 0) * 100).toFixed(0)}%`}
                             >
                               {reports.statusDistribution.map((entry: any, index: number) => {
                                 const colors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
