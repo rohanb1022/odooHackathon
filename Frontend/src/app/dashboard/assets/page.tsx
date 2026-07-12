@@ -335,7 +335,9 @@ export default function AssetsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAssets.length === 0 ? (
+                {isLoading ? (
+                  [...Array(7)].map((_, i) => <SkeletonRow key={i} />)
+                ) : paginatedAssets.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: 'hsl(var(--text-muted))' }}>
                       <div className="empty-state">
@@ -346,7 +348,7 @@ export default function AssetsPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAssets.map(asset => {
+                  paginatedAssets.map(asset => {
                     const isExpanded = expandedId === asset._id;
                     const data = aiData[asset._id];
                     const isLoadingDetails = loadingExpanded[asset._id];
@@ -511,6 +513,7 @@ export default function AssetsPage() {
                 )}
               </tbody>
             </table>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
           </div>
         )}
       </div>

@@ -24,12 +24,6 @@ const MENU_ITEMS = [
 
 const INBOX_ITEMS = [
   { name: 'AI Assistant',   href: '/dashboard/ai-assistant', icon: Sparkles,        badge: 'AI' },
-  { name: 'Notifications',  href: '/dashboard/reports?tab=alerts', icon: Bell,      badge: '3' },
-];
-
-const GENERAL_ITEMS = [
-  { name: 'Profile',        href: '/dashboard/settings',     icon: User },
-  { name: 'Settings',       href: '/dashboard/settings',     icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -229,46 +223,6 @@ export default function Sidebar() {
                       )}
                     </>
                   )}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Section 3: General */}
-        <div>
-          {!collapsed && (
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', paddingLeft: '8px' }}>
-              General
-            </div>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {GENERAL_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  title={collapsed ? item.name : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: collapsed ? '12px' : '11px 14px',
-                    borderRadius: '14px',
-                    backgroundColor: isActive ? '#2563eb' : 'transparent',
-                    color: isActive ? '#ffffff' : '#475569',
-                    fontWeight: isActive ? 700 : 600,
-                    fontSize: '14px',
-                    textDecoration: 'none',
-                    transition: 'all 0.15s ease',
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                  }}
-                >
-                  <Icon size={19} color={isActive ? '#ffffff' : '#64748b'} strokeWidth={1.8} />
-                  {!collapsed && <span>{item.name}</span>}
                 </Link>
               );
             })}

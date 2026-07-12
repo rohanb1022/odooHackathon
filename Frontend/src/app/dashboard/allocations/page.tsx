@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/axios';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import Link from 'next/link';
 import PromptModal from '@/components/ui/PromptModal';
 import { toast } from 'react-toastify';
-import Link from 'next/link';
+import Pagination from '@/components/ui/Pagination';
 import { Repeat, ArrowLeftRight, Package, Plus, CheckCircle, X, RotateCcw } from 'lucide-react';
 
 function getBadgeClass(status: string) {
@@ -34,8 +35,12 @@ export default function AllocationsPage() {
   const user = useAuthStore(s => s.user);
   const [activeTab, setActiveTab] = useState<'my-allocations' | 'all-allocations' | 'transfers'>('my-allocations');
   const [allocations, setAllocations] = useState<any[]>([]);
-  const [transfers, setTransfers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [transfers, setTransfers]     = useState<any[]>([]);
+  const [isLoading, setIsLoading]     = useState(true);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [showAllocateModal, setShowAllocateModal] = useState(false);
   const [assets, setAssets] = useState<any[]>([]);
@@ -50,7 +55,10 @@ export default function AllocationsPage() {
 
   const canManage = user?.role === 'admin' || user?.role === 'asset_manager';
 
-  useEffect(() => { fetchData(); }, [activeTab]);
+  useEffect(() => { 
+    setCurrentPage(1);
+    fetchData(); 
+  }, [activeTab]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -128,6 +136,12 @@ export default function AllocationsPage() {
     } catch { toast.error('Failed to load assets/employees'); }
   };
 
+  const paginatedAllocations = allocations.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalAllocationsPages = Math.ceil(allocations.length / itemsPerPage);
+
+  const paginatedTransfers = transfers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalTransfersPages = Math.ceil(transfers.length / itemsPerPage);
+
   const tabs = [
     { id: 'my-allocations', label: 'My Allocations', icon: Package, show: true },
     { id: 'all-allocations', label: 'All Allocations', icon: Repeat, show: canManage },
@@ -186,7 +200,7 @@ export default function AllocationsPage() {
                 <tbody>
                   {isLoading
                     ? [...Array(5)].map((_, i) => <SkeletonRow key={i} cols={6} />)
-                    : allocations.length === 0
+                    : paginatedAllocations.length === 0
                       ? (
                         <tr><td colSpan={6}>
                           <div className="empty-state">
@@ -196,21 +210,29 @@ export default function AllocationsPage() {
                           </div>
                         </td></tr>
                       )
-                      : allocations.map(alloc => (
+                      : paginatedAllocations.map(alloc => (
                         <tr key={alloc._id}>
                           <td>
-                            <div>
-                              <p style={{ fontWeight: 600, fontSize: '.875rem' }}>{alloc.asset?.name || '—'}</p>
-                              <p style={{ fontSize: '.73rem', color: 'hsl(var(--text-muted))', fontFamily: 'monospace', marginTop: 1 }}>{alloc.asset?.assetTag || '—'}</p>
-                            </div>
+                            {alloc.asset ? (
+                              <div>
+                                <p style={{ fontWeight: 600, fontSize: '.875rem' }}>{alloc.asset.name || 'Unknown Asset'}</p>
+                                <p style={{ fontSize: '.73rem', color: 'hsl(var(--text-muted))', fontFamily: 'monospace', marginTop: 1 }}>{alloc.asset.assetTag || 'Unknown Tag'}</p>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'hsl(var(--text-muted))', fontSize: '.875rem' }}>N/A (Deleted Asset)</span>
+                            )}
                           </td>
                           <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, color: 'hsl(var(--primary))', flexShrink: 0 }}>
-                                {alloc.allocatedToUser?.name?.[0]?.toUpperCase() || '?'}
+                            {alloc.allocatedToUser ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, color: 'hsl(var(--primary))', flexShrink: 0 }}>
+                                  {alloc.allocatedToUser.name?.[0]?.toUpperCase() || '?'}
+                                </div>
+                                <span style={{ fontSize: '.8125rem' }}>{alloc.allocatedToUser.name}</span>
                               </div>
-                              <span style={{ fontSize: '.8125rem' }}>{alloc.allocatedToUser?.name || '—'}</span>
-                            </div>
+                            ) : (
+                              <span style={{ color: 'hsl(var(--text-muted))', fontSize: '.8125rem' }}>N/A (Deleted User)</span>
+                            )}
                           </td>
                           <td style={{ fontSize: '.8125rem', color: 'hsl(var(--text-secondary))' }}>
                             {alloc.allocatedDate ? new Date(alloc.allocatedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
@@ -245,31 +267,39 @@ export default function AllocationsPage() {
                 <tbody>
                   {isLoading
                     ? [...Array(4)].map((_, i) => <SkeletonRow key={i} cols={5} />)
-                    : transfers.length === 0
-                      ? (
-                        <tr><td colSpan={5}>
-                          <div className="empty-state">
-                            <div className="empty-state-icon"><ArrowLeftRight size={22} /></div>
-                            <p className="empty-state-title">No transfer requests</p>
-                            <p className="empty-state-desc">Transfer requests will appear here once submitted.</p>
-                          </div>
-                        </td></tr>
-                      )
-                      : transfers.map(tr => (
-                        <tr key={tr._id}>
+                    : paginatedTransfers.length === 0
+                    ? (
+                      <tr><td colSpan={5}>
+                        <div className="empty-state">
+                          <div className="empty-state-icon"><ArrowLeftRight size={22} /></div>
+                          <p className="empty-state-title">No transfer requests</p>
+                          <p className="empty-state-desc">Transfer requests will appear here once submitted.</p>
+                        </div>
+                      </td></tr>
+                    )
+                    : paginatedTransfers.map(tr => (
+                      <tr key={tr._id}>
                           <td>
-                            <div>
-                              <p style={{ fontWeight: 600, fontSize: '.875rem' }}>{tr.asset?.name || '—'}</p>
-                              <p style={{ fontSize: '.73rem', color: 'hsl(var(--text-muted))', fontFamily: 'monospace', marginTop: 1 }}>{tr.asset?.assetTag || '—'}</p>
-                            </div>
+                            {tr.asset ? (
+                              <div>
+                                <p style={{ fontWeight: 600, fontSize: '.875rem' }}>{tr.asset.name || 'Unknown Asset'}</p>
+                                <p style={{ fontSize: '.73rem', color: 'hsl(var(--text-muted))', fontFamily: 'monospace', marginTop: 1 }}>{tr.asset.assetTag || 'Unknown Tag'}</p>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'hsl(var(--text-muted))', fontSize: '.875rem' }}>N/A (Deleted Asset)</span>
+                            )}
                           </td>
                           <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, color: 'hsl(var(--primary))', flexShrink: 0 }}>
-                                {tr.requestedBy?.name?.[0]?.toUpperCase() || '?'}
+                            {tr.requestedBy ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgb(79,70,229/.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, color: 'hsl(var(--primary))', flexShrink: 0 }}>
+                                  {tr.requestedBy.name?.[0]?.toUpperCase() || '?'}
+                                </div>
+                                <span style={{ fontSize: '.8125rem' }}>{tr.requestedBy.name}</span>
                               </div>
-                              <span style={{ fontSize: '.8125rem' }}>{tr.requestedBy?.name || '—'}</span>
-                            </div>
+                            ) : (
+                              <span style={{ color: 'hsl(var(--text-muted))', fontSize: '.8125rem' }}>N/A (Deleted User)</span>
+                            )}
                           </td>
                           <td style={{ maxWidth: 220 }}>
                             <p style={{ fontSize: '.8125rem', color: 'hsl(var(--text-secondary))', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{tr.reason || '—'}</p>
@@ -294,6 +324,11 @@ export default function AllocationsPage() {
               </>
             )}
           </table>
+          <Pagination 
+            currentPage={currentPage} 
+            totalPages={activeTab === 'transfers' ? totalTransfersPages : totalAllocationsPages} 
+            onPageChange={setCurrentPage} 
+          />
         </div>
       </div>
 
