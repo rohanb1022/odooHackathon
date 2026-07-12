@@ -12,6 +12,7 @@ const NOTIFICATION_TYPES = [
   'Booking_Reminder',
   'Maintenance_Raised',
   'Maintenance_Approved',
+  'Maintenance_Assigned',
   'Maintenance_Rejected',
   'Maintenance_Resolved',
   'Audit_Assigned',
