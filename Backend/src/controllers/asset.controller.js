@@ -116,6 +116,9 @@ exports.registerAsset = asyncHandler(async (req, res) => {
  * @access All authenticated
  * @query category, status, location, departmentId, assetTag, isBookable, search, page, limit
  */
+
+
+// This is for 
 exports.getAllAssets = asyncHandler(async (req, res) => {
   const {
     category, status, location, departmentId, assetTag,
@@ -209,10 +212,10 @@ exports.getAssetById = asyncHandler(async (req, res) => {
   // Booking history (last 10, only for bookable assets)
   const bookingHistory = asset.isBookable
     ? await Booking.find({ resourceId: asset._id })
-        .populate('bookedBy', 'name email')
-        .sort({ startTime: -1 })
-        .limit(10)
-        .lean()
+      .populate('bookedBy', 'name email')
+      .sort({ startTime: -1 })
+      .limit(10)
+      .lean()
     : [];
 
   return sendSuccess(res, {
