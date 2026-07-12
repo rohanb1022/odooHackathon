@@ -6,35 +6,31 @@ import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Package, Users, Settings, Calendar,
   Wrench, FileCheck, BarChart3, ChevronLeft, ChevronRight,
-  Repeat, Hexagon, Sparkles
+  Repeat, Hexagon, Sparkles, Bell, MessageSquare, CheckSquare,
+  User, ShieldAlert
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
-const NAV = [
-  { name: 'Dashboard',    href: '/dashboard',              icon: LayoutDashboard, roles: ['admin','asset_manager','department_head','employee'] },
-  { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: Sparkles,        roles: ['admin','asset_manager','department_head','employee'] },
-  { name: 'Assets',       href: '/dashboard/assets',       icon: Package,         roles: ['admin','asset_manager','department_head','employee'] },
-  { name: 'Allocations',  href: '/dashboard/allocations',  icon: Repeat,          roles: ['admin','asset_manager','department_head','employee'] },
-  { name: 'Bookings',     href: '/dashboard/bookings',     icon: Calendar,        roles: ['admin','asset_manager','department_head','employee'] },
-  { name: 'Maintenance',  href: '/dashboard/maintenance',  icon: Wrench,          roles: ['admin','asset_manager','department_head','employee'] },
-  { name: 'Audits',       href: '/dashboard/audits',       icon: FileCheck,       roles: ['admin','asset_manager','department_head'] },
-  { name: 'Reports',      href: '/dashboard/reports',      icon: BarChart3,       roles: ['admin','asset_manager','department_head'] },
-  { name: 'Organization', href: '/dashboard/organization', icon: Users,           roles: ['admin'] },
-  { name: 'Settings',     href: '/dashboard/settings',     icon: Settings,        roles: ['admin','asset_manager','department_head','employee'] },
+const MENU_ITEMS = [
+  { name: 'Home',           href: '/dashboard',              icon: LayoutDashboard, roles: ['admin','asset_manager','department_head','employee'] },
+  { name: 'Asset Management',href: '/dashboard/assets',       icon: Package,         roles: ['admin','asset_manager','department_head','employee'] },
+  { name: 'Maintenance',    href: '/dashboard/maintenance',  icon: Wrench,          roles: ['admin','asset_manager','department_head','employee'] },
+  { name: 'Allocations',    href: '/dashboard/allocations',  icon: Repeat,          roles: ['admin','asset_manager','department_head','employee'] },
+  { name: 'Financial & Reports', href: '/dashboard/reports', icon: BarChart3,       roles: ['admin','asset_manager','department_head'] },
+  { name: 'User Management',href: '/dashboard/organization', icon: Users,           roles: ['admin'] },
+  { name: 'Audits',         href: '/dashboard/audits',       icon: FileCheck,       roles: ['admin','asset_manager','department_head'] },
+  { name: 'Schedule',       href: '/dashboard/bookings',     icon: Calendar,        roles: ['admin','asset_manager','department_head','employee'] },
 ];
 
-function getRoleColor(role: string) {
-  switch (role) {
-    case 'admin': return '#EF4444';
-    case 'asset_manager': return '#4F46E5';
-    case 'department_head': return '#F59E0B';
-    default: return '#10B981';
-  }
-}
+const INBOX_ITEMS = [
+  { name: 'AI Assistant',   href: '/dashboard/ai-assistant', icon: Sparkles,        badge: 'AI' },
+  { name: 'Notifications',  href: '/dashboard/reports?tab=alerts', icon: Bell,      badge: '3' },
+];
 
-function formatRole(role: string) {
-  return role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
+const GENERAL_ITEMS = [
+  { name: 'Profile',        href: '/dashboard/settings',     icon: User },
+  { name: 'Settings',       href: '/dashboard/settings',     icon: Settings },
+];
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -44,195 +40,296 @@ export default function Sidebar() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  const items = NAV.filter(i => !user || i.roles.includes(user.role));
-  const initials = user?.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
-  const roleColor = getRoleColor(user?.role || '');
-
-  const W = collapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)';
+  const menuItems = MENU_ITEMS.filter(i => !user || i.roles.includes(user.role as string));
 
   return (
     <aside
       style={{
-        width: W,
-        minWidth: W,
-        height: '100vh',
+        width: collapsed ? '84px' : '260px',
+        minWidth: collapsed ? '84px' : '260px',
+        height: 'calc(100vh - 28px)',
         position: 'fixed',
-        left: 0,
-        top: 0,
-        background: 'hsl(var(--surface))',
-        borderRight: '1px solid hsl(var(--border))',
+        left: '14px',
+        top: '14px',
+        backgroundColor: '#ffffff',
+        borderRadius: '26px',
+        boxShadow: '0 8px 30px rgba(15, 23, 42, 0.06)',
+        border: '1px solid #e2e8f0',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 100,
-        transition: 'width 0.22s cubic-bezier(.4,0,.2,1)',
+        transition: 'all 0.25s cubic-bezier(.4,0,.2,1)',
         overflow: 'hidden',
+        padding: collapsed ? '18px 10px' : '22px 18px',
       }}
     >
-      {/* ── Logo ── */}
-      <div style={{
-        height: 'var(--header-height)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'space-between',
-        padding: collapsed ? '0' : '0 1rem 0 1.25rem',
-        borderBottom: '1px solid hsl(var(--border))',
-        flexShrink: 0,
-      }}>
-        {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-            <div style={{
-              width: 30, height: 30,
-              background: 'hsl(var(--primary))',
-              borderRadius: 8,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <Hexagon size={17} color="#fff" strokeWidth={2.5} />
-            </div>
-            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'hsl(var(--text))', letterSpacing: '-.02em' }}>
-              AssetFlow
-            </span>
-          </div>
-        )}
-        {collapsed && (
-          <div style={{
-            width: 30, height: 30,
-            background: 'hsl(var(--primary))',
-            borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Hexagon size={17} color="#fff" strokeWidth={2.5} />
-          </div>
-        )}
-        {!collapsed && (
-          <button
-            onClick={() => setCollapsed(true)}
-            className="btn-icon btn-ghost"
-            style={{ flexShrink: 0, color: 'hsl(var(--text-muted))' }}
-            title="Collapse sidebar"
-          >
-            <ChevronLeft size={16} />
-          </button>
-        )}
-      </div>
-
-      {/* ── Nav ── */}
-      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '.75rem .625rem' }}>
-        {/* Expand button when collapsed */}
-        {collapsed && (
-          <button
-            onClick={() => setCollapsed(false)}
-            className="btn-ghost"
-            style={{
-              width: '100%', height: 36,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 8, marginBottom: '.75rem',
-              color: 'hsl(var(--text-muted))',
-            }}
-            title="Expand sidebar"
-          >
-            <ChevronRight size={16} />
-          </button>
-        )}
-
-        <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {items.map(item => {
-            const active = pathname === item.href || pathname.startsWith(item.href + '/');
-            const Icon = item.icon;
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={`nav-link${active ? ' active' : ''}`}
-                  title={collapsed ? item.name : undefined}
-                  style={{
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    padding: collapsed ? '.6rem' : '.55rem .875rem',
-                    position: 'relative',
-                  }}
-                >
-                  {/* Active indicator bar */}
-                  {active && (
-                    <span style={{
-                      position: 'absolute',
-                      left: 0, top: '50%', transform: 'translateY(-50%)',
-                      width: 3, height: '60%',
-                      background: 'hsl(var(--primary))',
-                      borderRadius: '0 3px 3px 0',
-                    }} />
-                  )}
-                  <Icon
-                    size={18}
-                    strokeWidth={active ? 2.2 : 1.8}
-                    style={{ flexShrink: 0 }}
-                  />
-                  {!collapsed && (
-                    <span style={{
-                      fontSize: '.875rem',
-                      opacity: mounted ? 1 : 0,
-                      transition: 'opacity .15s',
-                    }}>
-                      {item.name}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      {/* ── User profile ── */}
-      <div style={{
-        padding: '.75rem .625rem',
-        borderTop: '1px solid hsl(var(--border))',
-        flexShrink: 0,
-      }}>
-        <div style={{
+      {/* ── Logo & Brand ── */}
+      <div
+        style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '.75rem',
-          padding: '.55rem .625rem',
-          borderRadius: 8,
-          overflow: 'hidden',
-          cursor: 'default',
-        }}>
-          {/* Avatar */}
-          <div style={{
-            width: 32, height: 32,
-            borderRadius: '50%',
-            background: `${roleColor}18`,
-            border: `2px solid ${roleColor}40`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-            fontSize: '.7rem',
-            fontWeight: 700,
-            color: roleColor,
-          }}>
-            {initials}
+          justifyContent: collapsed ? 'center' : 'space-between',
+          marginBottom: '24px',
+          paddingBottom: '16px',
+          borderBottom: '1px solid #f1f5f9',
+        }}
+      >
+        <Link
+          href="/dashboard"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            textDecoration: 'none',
+          }}
+        >
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+              color: '#ffffff',
+              flexShrink: 0,
+            }}
+          >
+            <Hexagon size={20} strokeWidth={2.5} />
           </div>
           {!collapsed && (
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <p style={{
-                fontSize: '.8125rem', fontWeight: 600,
-                color: 'hsl(var(--text))',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {user?.name || 'User'}
-              </p>
-              <p style={{
-                fontSize: '.7rem',
-                color: roleColor,
-                fontWeight: 500,
-                marginTop: 1,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {formatRole(user?.role || '')}
-              </p>
+            <span
+              style={{
+                fontSize: '20px',
+                fontWeight: 800,
+                color: '#0f172a',
+                letterSpacing: '-0.5px',
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              AssetFlow
+            </span>
+          )}
+        </Link>
+
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            width: '26px',
+            height: '26px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#64748b',
+          }}
+          title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        >
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+      </div>
+
+      {/* ── Navigation Sections ── */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+        {/* Section 1: Menu */}
+        <div>
+          {!collapsed && (
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', paddingLeft: '8px' }}>
+              Menu
             </div>
           )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {menuItems.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  title={collapsed ? item.name : undefined}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: collapsed ? '12px' : '11px 14px',
+                    borderRadius: '14px',
+                    backgroundColor: isActive ? '#2563eb' : 'transparent',
+                    color: isActive ? '#ffffff' : '#475569',
+                    fontWeight: isActive ? 700 : 600,
+                    fontSize: '14px',
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.3)' : 'none',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                  }}
+                >
+                  <Icon size={19} color={isActive ? '#ffffff' : '#64748b'} strokeWidth={isActive ? 2.3 : 1.8} />
+                  {!collapsed && <span style={{ flex: 1 }}>{item.name}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section 2: Inbox */}
+        <div>
+          {!collapsed && (
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', paddingLeft: '8px' }}>
+              Inbox
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {INBOX_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  title={collapsed ? item.name : undefined}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: collapsed ? '12px' : '11px 14px',
+                    borderRadius: '14px',
+                    backgroundColor: isActive ? '#2563eb' : 'transparent',
+                    color: isActive ? '#ffffff' : '#475569',
+                    fontWeight: isActive ? 700 : 600,
+                    fontSize: '14px',
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                  }}
+                >
+                  <Icon size={19} color={isActive ? '#ffffff' : '#64748b'} strokeWidth={1.8} />
+                  {!collapsed && (
+                    <>
+                      <span style={{ flex: 1 }}>{item.name}</span>
+                      {item.badge && (
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            padding: '2px 7px',
+                            borderRadius: '9999px',
+                            backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
+                            color: isActive ? '#ffffff' : '#2563eb',
+                          }}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section 3: General */}
+        <div>
+          {!collapsed && (
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', paddingLeft: '8px' }}>
+              General
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {GENERAL_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  title={collapsed ? item.name : undefined}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: collapsed ? '12px' : '11px 14px',
+                    borderRadius: '14px',
+                    backgroundColor: isActive ? '#2563eb' : 'transparent',
+                    color: isActive ? '#ffffff' : '#475569',
+                    fontWeight: isActive ? 700 : 600,
+                    fontSize: '14px',
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                  }}
+                >
+                  <Icon size={19} color={isActive ? '#ffffff' : '#64748b'} strokeWidth={1.8} />
+                  {!collapsed && <span>{item.name}</span>}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      {/* ── Bottom Mascot Promo Banner (Exact to WealthPro Reference) ── */}
+      {!collapsed && (
+        <div
+          style={{
+            marginTop: '16px',
+            padding: '16px',
+            borderRadius: '20px',
+            background: 'linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%)',
+            border: '1px solid #bfdbfe',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '14px',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '10px',
+              boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+            }}
+          >
+            <Sparkles size={22} />
+          </div>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a8a' }}>AI Asset Advisor</div>
+          <div style={{ fontSize: '11px', color: '#3b82f6', margin: '4px 0 10px 0', fontWeight: 500 }}>
+            Automated maintenance & valuation diagnostics active.
+          </div>
+          <Link
+            href="/dashboard/ai-assistant"
+            style={{
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 700,
+              padding: '6px 14px',
+              borderRadius: '10px',
+              textDecoration: 'none',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.2)',
+            }}
+          >
+            Explore AI →
+          </Link>
+        </div>
+      )}
     </aside>
   );
 }
